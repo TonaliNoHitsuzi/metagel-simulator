@@ -722,14 +722,19 @@ $('bP').onclick  = ()=>randPerturb(['P']);
 $('bT').onclick  = ()=>randPerturb(['T']);
 $('bPh').onclick = ()=>randPerturb(['Ph']);
 $('bMix').onclick= ()=>randPerturb(['P','T','Ph']);
-function randPerturb(keys){              // 相对当前状态随机扰动（非绝对跳变）
-  const range = { P:[8,25], T:[1.5,4], Ph:[0.6,1.8] };
-  const lim   = { P:[0,70], T:[28,43], Ph:[2,8] };
+function randPerturb(keys){              // 相对当前状态随机扰动：小步长 + 预测落点，靠边/越界自动反向
+  const range  = { P:[5,12], T:[0.8,2], Ph:[0.3,0.8] };
+  const lim    = { P:[0,70], T:[28,43], Ph:[2,8] };
+  const margin = { P: 4, T: 0.6, Ph: 0.25 };   // 边缘安全带
   const next = { ...state };
   for(const k of keys){
     const [lo,hi] = range[k];
-    const d = (lo + Math.random()*(hi-lo)) * (Math.random()<0.5? -1 : 1);
-    next[k] = Math.min(lim[k][1], Math.max(lim[k][0], next[k]+d));
+    const d = lo + Math.random()*(hi-lo);
+    let dir = Math.random()<0.5? -1 : 1;
+    const [mn,mx] = lim[k], m = margin[k];
+    let target = next[k] + dir*d;
+    if(target > mx-m || target < mn+m){ dir = -dir; target = next[k] + dir*d; }  // 落点进安全带 → 反向
+    next[k] = Math.min(mx, Math.max(mn, target));
   }
   animTo(next);
 }

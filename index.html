@@ -135,11 +135,11 @@
   <section class="panel">
     <h2>① 实时监视 · 示波器模式（波形 + 粗谱瀑布 ≈59 kHz/bin——只够看峰移动，不能定量）</h2>
     <div class="triple">
-      <div class="chan sP sel" id="chP"><div class="name">压力凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
+      <div class="chan sP sel" id="chP"><div class="name">压力凝胶通道</div><div class="info">力学耦合：动压力→三通道全动</div>
         <canvas class="wave" id="wP"></canvas><canvas class="fall" id="fP"></canvas></div>
-      <div class="chan sT" id="chT"><div class="name">温度凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
+      <div class="chan sT" id="chT"><div class="name">温度凝胶通道</div><div class="info">响 P+T：混叠，需解耦</div>
         <canvas class="wave" id="wT"></canvas><canvas class="fall" id="fT"></canvas></div>
-      <div class="chan sPh" id="chPh"><div class="name">pH 凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
+      <div class="chan sPh" id="chPh"><div class="name">pH 凝胶通道</div><div class="info">响 P+pH：混叠，需解耦</div>
         <canvas class="wave" id="wPh"></canvas><canvas class="fall" id="fPh"></canvas></div>
     </div>
 
@@ -178,8 +178,13 @@
     <div class="footnote">
       <b>仪器双模式</b>：<b>连续监视</b>（示波器 FFT 模式，1024 点粗谱 ≈59 kHz/bin——免费、实时，只够看峰移动）+
       <b>离散测量</b>（冻结一帧 → 16k 点零填充 ≈3.7 kHz/bin + 包络 + 抛物线插值 → 定量反演）。被测对象变化只作废测量，不中断监视。<br>
-      <b>合成物理（窄带回波模型）</b>：带隙反射峰窄，回波近似为以峰频振荡的射频段；帧间相位确定、噪声随机，10 帧叠加平均只压噪声（√10）。
-      反演前先以无噪基线解调做<b>仪器校零</b>，再解 3×3 线性方程组。<b>把噪声调大再测量</b>，观察反演误差恶化——信噪比的代价。
+      <b>耦合结构（论文物理）</b>：<b>压力是力学量——三支凝胶的空气柱同时被压缩，三通道一起动</b>（幅度 6.3 : 4.5 : 3.5 递减）；
+      温度/pH 是化学刺激——只有含响应组分的凝胶（PNIPAM / 壳聚糖）显著响应。温度/pH 通道的峰移因此是<b>混叠信号</b>
+      （压力贡献+自身响应），单通道读不出真值——这就是解耦存在的原因。系数矩阵为下三角：
+      压力凝胶单独定 ΔP → 其余扣除压力贡献后各定各的——论文"效应独立近线性，两支凝胶即可解耦"即此级联。
+      <b>试一试</b>：只动压力，三瀑布一起移动（耦合）；只动温度/pH，仅对应通道移动（选择性）。<br>
+      <b>合成与解调</b>：窄带回波模型（帧间相位确定、噪声随机，10 帧平均只压噪声 √10）；反演前先以无噪基线解调做<b>仪器校零</b>。
+      <b>把噪声调大再测量</b>，观察反演误差恶化——信噪比的代价。
     </div>
   </section>
 </div>
@@ -195,11 +200,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const $ = id => document.getElementById(id);
 
-/* ============ 物理参数（论文 Fig.2 标定） ============ */
+/* ============ 物理参数（论文 Fig.2 标定 + 论文耦合结构） ============ */
+/* 论文原文：压力对三支凝胶均有影响（力学耦合）；温度/pH 分别只显著作用于各自凝胶（化学选择性）。
+   主灵敏度 = 论文标定值；压力交叉项为演示设定（同量级递减）；温/pH 交叉 ≈0。
+   该矩阵为下三角结构 —— 压力凝胶单独定 ΔP，温度/pH 凝胶扣除压力贡献后各定各的：即论文"两支即可解耦"。 */
 const GELS = {
-  P : { f0: 8.98e6, kP: 6.343e-4, kT: 5e-6,  kPh: 2.0e-4, seed: 11 },
-  T : { f0: 8.42e6, kP: 5.0e-5,  kT: 9.5e-3, kPh: 5.0e-4, seed: 23 },
-  Ph: { f0: 9.47e6, kP: 5.0e-5,  kT: 1.0e-4, kPh: 2.708e-2, seed: 37 },
+  P : { f0: 8.98e6, kP: 6.343e-4, kT: 0,       kPh: 0,        seed: 11 },
+  T : { f0: 8.42e6, kP: 4.5e-4,  kT: 9.5e-3,  kPh: 0,        seed: 23 },
+  Ph: { f0: 9.47e6, kP: 3.5e-4,  kT: 0,       kPh: 2.708e-2, seed: 37 },
 };
 const BASE = { P: 0, T: 28, Ph: 8.0 };
 const state = { P: 10, T: 37, Ph: 7.4 };

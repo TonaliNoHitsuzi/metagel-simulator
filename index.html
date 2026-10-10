@@ -76,6 +76,11 @@
   .mini th{color:var(--ink2);font-weight:600;font-size:12px}
   .mini td.err{color:var(--rose)}
   .footnote{padding:10px 14px;font-size:11.5px;color:var(--ink2);line-height:1.7;border-top:1px solid var(--line)}
+  .methods{margin:0 14px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+  .methods summary{cursor:pointer;padding:10px 14px;font-size:12.5px;font-weight:600;color:var(--gold);user-select:none}
+  .methods .mbody{padding:2px 16px 12px;font-size:12px;color:var(--ink2);line-height:1.75}
+  .methods ol{padding-left:20px;margin:6px 0}
+  .methods li{margin:4px 0}
   footer{padding:10px 22px;font-size:11.5px;color:var(--ink2);border-top:1px solid var(--line);
          display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
   footer a{color:var(--accent);text-decoration:none}
@@ -116,10 +121,10 @@
         <input type="range" id="sPh" min="2" max="8" step="0.05" value="7.4" dir="rtl">
       </div>
       <div class="row">
-        <button id="bP">只变压</button>
-        <button id="bT">只升温</button>
-        <button id="bPh">只变 pH</button>
-        <button id="bMix">混合扰动</button>
+        <button id="bP">随机变压</button>
+        <button id="bT">随机变温</button>
+        <button id="bPh">随机变 pH</button>
+        <button id="bMix">混合扰动（三参数随机）</button>
         <button id="bReset" class="primary">复位</button>
       </div>
       <div class="row">
@@ -186,6 +191,23 @@
       <b>合成与解调</b>：窄带回波模型（帧间相位确定、噪声随机，10 帧平均只压噪声 √10）；反演前先以无噪基线解调做<b>仪器校零</b>。
       <b>把噪声调大再测量</b>，观察反演误差恶化——信噪比的代价。
     </div>
+    <details class="methods">
+      <summary>模拟方法与数据声明（点开查看：本页全部信号为数值模拟）</summary>
+      <div class="mbody">
+        <p><b>本演示所有"测量数据"均为浏览器内实时数值模拟，无任何实测采集。</b>模拟链条如下：</p>
+        <ol>
+          <li><b>传感模型</b>：相对频移 Δf/f₀ = Σ kᵢⱼ·Δxⱼ。主灵敏度取论文 Fig. 2 标定实测值（5.7 kHz/mmHg、80 kHz/°C、256.4 kHz/pH）；
+            压力交叉项与 2% 化学交叉项为演示设定（论文未公布交叉数值，仅言 markedly pronounced）。</li>
+          <li><b>回波合成（窄带回波模型）</b>：r(t) = w(t)·cos(2π(f₀+Δf)t + φ₀) + n(t)。
+            w = 半余弦门控包络（模拟深度门控后的有限观测窗）；φ₀ 每通道固定（反射响应确定，帧平均才保信号）；n = 高斯白噪声（σ 由"信道噪声"滑块控制）。</li>
+          <li><b>解调管线</b>：512 样本 @60 MS/s → 10 帧叠加平均（噪声 ↓√10）→ 零填充 16384 点 FFT（3.66 kHz/bin）→
+            滑动峰值包络 → 窗内 argmax + 三点抛物线插值。结构与论文开源 MATLAB 代码一致（作者本地复现：谱分辨率 45.3 Hz、示例 pH 会话漂移 +50.2 kHz）。</li>
+          <li><b>校零与反演</b>：以无噪基线解调得 f_cal（吸收窗/包络系统偏置，对应仪器校零）→ Δf = f_peak − f_cal → 解 3×3 线性方程组得参数估计。</li>
+        </ol>
+        <p><b>与实测的主要差距</b>：真实带隙反射谱非单频窄带（含声子晶体带隙结构细节与旁瓣）；组织声衰减、散射、声窗衍射、探头指向性未建模；
+          动物个体差异、长期漂移、温度- pH 交互未模拟；3D 形变为概念映射，非有限元结果。参数真值 → 信号 → 反演的因果链忠于论文，数值精度仅供教学演示。</p>
+      </div>
+    </details>
   </section>
 </div>
 
@@ -696,10 +718,21 @@ function animTo(s){
     if(k<1) requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
-$('bP').onclick  = ()=>animTo({P:55,T:37,Ph:7.4});
-$('bT').onclick  = ()=>animTo({P:10,T:41.5,Ph:7.4});
-$('bPh').onclick = ()=>animTo({P:10,T:37,Ph:4.0});
-$('bMix').onclick= ()=>animTo({P:38,T:40.5,Ph:5.5});
+$('bP').onclick  = ()=>randPerturb(['P']);
+$('bT').onclick  = ()=>randPerturb(['T']);
+$('bPh').onclick = ()=>randPerturb(['Ph']);
+$('bMix').onclick= ()=>randPerturb(['P','T','Ph']);
+function randPerturb(keys){              // 相对当前状态随机扰动（非绝对跳变）
+  const range = { P:[8,25], T:[1.5,4], Ph:[0.6,1.8] };
+  const lim   = { P:[0,70], T:[28,43], Ph:[2,8] };
+  const next = { ...state };
+  for(const k of keys){
+    const [lo,hi] = range[k];
+    const d = (lo + Math.random()*(hi-lo)) * (Math.random()<0.5? -1 : 1);
+    next[k] = Math.min(lim[k][1], Math.max(lim[k][0], next[k]+d));
+  }
+  animTo(next);
+}
 $('bReset').onclick = ()=>animTo({P:10,T:37,Ph:7.4});
 $('sP').value=state.P;  $('vP').textContent=state.P.toFixed(1)+' mmHg';
 $('sT').value=state.T;  $('vT').textContent=state.T.toFixed(1)+' °C';

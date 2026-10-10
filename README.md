@@ -52,4 +52,6 @@ GitHub Pages 在线访问：**https://tonalinohitsuzi.github.io/metagel-simulato
 
 ## License
 
-MIT（演示代码本身）。论文参数与数据版权归原作者，引用请引原文。
+代码 MIT License。
+
+数值参数（灵敏度、f₀ 等）标定值取自 Tang H. et al., *Nature* 630, 84–90 (2024)，版权归原作者；引用请引原文 DOI: 10.1038/s41586-024-07334-y。

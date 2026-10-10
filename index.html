@@ -235,7 +235,9 @@ const GELS = {
 const BASE = { P: 0, T: 28, Ph: 8.0 };
 const state = { P: 10, T: 37, Ph: 7.4 };
 const urlp = new URLSearchParams(location.search);
-for(const k of ['P','T','Ph']){ const v = parseFloat(urlp.get(k)); if(!isNaN(v)) state[k] = v; }
+const LIM0 = { P:[0,70], T:[28,43], Ph:[2,8] };
+for(const k of ['P','T','Ph']){ const v = parseFloat(urlp.get(k));
+  if(!isNaN(v)) state[k] = Math.min(LIM0[k][1], Math.max(LIM0[k][0], v)); }   // URL 参数夹取到量程
 const disp = { ...state };
 
 for(const key of Object.keys(GELS)){
@@ -722,19 +724,24 @@ $('bP').onclick  = ()=>randPerturb(['P']);
 $('bT').onclick  = ()=>randPerturb(['T']);
 $('bPh').onclick = ()=>randPerturb(['Ph']);
 $('bMix').onclick= ()=>randPerturb(['P','T','Ph']);
-function randPerturb(keys){              // 相对当前状态随机扰动：小步长 + 预测落点，靠边/越界自动反向
+function randPerturb(keys){              // 相对当前状态随机扰动：越界/靠边 → 朝量程中心加力反弹，兜底拉回安全带（永不贴边）
   const range  = { P:[5,12], T:[0.8,2], Ph:[0.3,0.8] };
   const lim    = { P:[0,70], T:[28,43], Ph:[2,8] };
   const margin = { P: 4, T: 0.6, Ph: 0.25 };   // 边缘安全带
   const next = { ...state };
   for(const k of keys){
     const [lo,hi] = range[k];
-    const d = lo + Math.random()*(hi-lo);
+    let d = lo + Math.random()*(hi-lo);
     let dir = Math.random()<0.5? -1 : 1;
     const [mn,mx] = lim[k], m = margin[k];
     let target = next[k] + dir*d;
-    if(target > mx-m || target < mn+m){ dir = -dir; target = next[k] + dir*d; }  // 落点进安全带 → 反向
-    next[k] = Math.min(mx, Math.max(mn, target));
+    if(target > mx-m || target < mn+m){
+      d = d + m;                                  // 反弹加力
+      const center = (mn+mx)/2;
+      dir = next[k] > center ? -1 : 1;            // 朝量程中心弹（单向反向对出界值不够）
+      target = next[k] + dir*d;
+    }
+    next[k] = Math.min(mx-m, Math.max(mn+m, target));   // 终极兜底：任何残余越界都拉回带内
   }
   animTo(next);
 }

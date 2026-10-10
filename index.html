@@ -3,33 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Metagel Simulator · 元凝胶超声传感交互演示</title>
+<title>Metagel Simulator · 元凝胶超声传感测量闭环演示</title>
 <style>
   :root{
     --bg:#0e1116; --panel:#161b23; --panel2:#1c222d; --ink:#e8ebf1; --ink2:#9aa5b8; --line:#2a3242;
-    --accent:#3ec6b5; --accent2:#e0b34f; --blue:#5ba3f5; --rose:#e07a6e;
+    --accent:#3ec6b5; --gold:#e0b34f; --blue:#5ba3f5; --rose:#e07a6e;
     --p:#5ba3f5; --t:#e0b34f; --ph:#b07ce8;
   }
   @media (prefers-color-scheme: light){
     :root{ --bg:#f2f4f8; --panel:#fff; --panel2:#f6f8fb; --ink:#1a2233; --ink2:#5a6478; --line:#dfe4ec; }
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:"Segoe UI","Microsoft YaHei UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);
-       min-height:100vh;display:flex;flex-direction:column}
-  header{padding:14px 22px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  body{font-family:"Segoe UI","Microsoft YaHei UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  header{padding:13px 22px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
   header h1{font-size:19px;font-weight:700}
   header .sub{font-size:12.5px;color:var(--ink2)}
   header a{color:var(--accent);text-decoration:none}
-  main{flex:1;display:grid;grid-template-columns:minmax(340px,1.1fr) minmax(380px,1fr);gap:14px;padding:14px 22px}
-  @media (max-width:900px){ main{grid-template-columns:1fr} }
+  .layout{display:grid;grid-template-columns:minmax(330px,.95fr) minmax(430px,1.05fr);gap:14px;padding:14px 22px}
+  @media (max-width:960px){ .layout{grid-template-columns:1fr} }
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-  .panel h2{font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.06em;
-            padding:10px 14px 8px;border-bottom:1px solid var(--line)}
-  #stage{width:100%;height:420px;display:block;cursor:grab}
+  .panel h2{font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.06em;padding:10px 14px 8px;border-bottom:1px solid var(--line)}
+  #stage{width:100%;height:380px;display:block;cursor:grab}
   #stage:active{cursor:grabbing}
   .stage-note{padding:8px 14px;font-size:12px;color:var(--ink2);border-top:1px solid var(--line)}
-  /* 控制区 */
-  .controls{padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+  .controls{padding:13px 16px;display:flex;flex-direction:column;gap:13px}
   .ctl label{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px}
   .ctl .val{font-variant-numeric:tabular-nums;color:var(--ink2)}
   .ctl.p label .name{color:var(--p)} .ctl.t label .name{color:var(--t)} .ctl.ph label .name{color:var(--ph)}
@@ -42,17 +39,30 @@
   button:hover{border-color:var(--accent);color:var(--accent)}
   button.primary{background:var(--accent);color:#08201c;border-color:var(--accent);font-weight:700}
   button.primary:hover{filter:brightness(1.1);color:#08201c}
+  button:disabled{opacity:.45;cursor:wait}
   .switch{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink2);cursor:pointer;user-select:none}
   .switch input{accent-color:var(--accent)}
-  .noise-para{width:110px}
-  /* 频谱 */
-  .spectra{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:12px 14px}
-  .spec{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-  .spec .name{font-size:12px;font-weight:700;margin-bottom:2px}
-  .spec .df{font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-bottom:4px}
-  .spec canvas{width:100%;height:86px;display:block}
+  /* 通道小图 */
+  .triple{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:12px 14px}
+  .chan{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;position:relative}
+  .chan .name{font-size:12px;font-weight:700;margin-bottom:2px}
+  .chan .info{font-size:11px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-bottom:4px;min-height:14px}
+  .chan canvas{width:100%;height:78px;display:block}
   .sP .name{color:var(--p)} .sT .name{color:var(--t)} .sPh .name{color:var(--ph)}
-  /* 解耦 */
+  .stale{position:absolute;inset:0;border-radius:10px;background:color-mix(in srgb,var(--bg) 72%,transparent);
+         display:flex;align-items:center;justify-content:center;font-size:11.5px;color:var(--gold);
+         text-align:center;padding:6px;opacity:0;pointer-events:none;transition:opacity .25s}
+  .stale.on{opacity:1}
+  /* 管线 */
+  .pipe{display:flex;gap:6px;padding:12px 14px 4px;flex-wrap:wrap}
+  .step{flex:1;min-width:86px;text-align:center;font-size:11.5px;color:var(--ink2);
+        border:1px solid var(--line);border-radius:8px;padding:7px 4px;background:var(--panel2);
+        transition:all .3s;position:relative}
+  .step .no{display:block;font-size:10px;opacity:.7}
+  .step.lit{color:var(--accent);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .step.done{color:var(--accent);border-color:var(--accent)}
+  .runrow{padding:8px 14px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  /* 反演 */
   .decoupled{padding:12px 14px}
   table.mini{border-collapse:collapse;width:100%;font-size:13px}
   .mini th,.mini td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
@@ -63,7 +73,6 @@
   footer{padding:10px 22px;font-size:11.5px;color:var(--ink2);border-top:1px solid var(--line);
          display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
   footer a{color:var(--accent);text-decoration:none}
-  .kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:11px}
 </style>
 <script type="importmap">
 { "imports": {
@@ -76,18 +85,17 @@
 
 <header>
   <h1>Metagel Simulator</h1>
-  <span class="sub">可注射元凝胶超声传感 · 交互演示 ——
+  <span class="sub">测量闭环演示：原始信号 → 解调管线 → 反演 ——
     Tang H. et al., <i>Nature</i> 630, 84–90 (2024) ·
     <a href="https://doi.org/10.1038/s41586-024-07334-y">DOI</a></span>
 </header>
 
-<main>
-  <!-- 左：3D -->
+<div class="layout">
+  <!-- 左：3D + 参数（真值，仅"大自然"知道） -->
   <section class="panel">
-    <h2>3D 构象 · 理想化建模（2×2×2 mm，5×5×5 周期空气柱）</h2>
+    <h2>真实构象（参数是隐藏的真值，仪器看不到）</h2>
     <canvas id="stage"></canvas>
-    <div class="stage-note">拖动旋转 / 滚轮缩放。压力压缩凝胶、温敏收缩（PNIPAM）、酸性溶胀（壳聚糖）——
-      形变改变晶格常数 → 声子带隙移动 → 反射峰频移。</div>
+    <div class="stage-note">拖动旋转 / 滚轮缩放。参数改变的是凝胶本身——仪器唯一能拿到的是右侧的原始回波。</div>
     <div class="controls">
       <div class="ctl p">
         <label><span class="name">压力 P</span><span class="val" id="vP">10 mmHg</span></label>
@@ -109,25 +117,47 @@
         <button id="bReset" class="primary">复位</button>
       </div>
       <div class="row">
-        <label class="switch"><input type="checkbox" id="noise" checked>测量噪声</label>
-        <input type="range" id="sigma" class="noise-para" min="0.2" max="5" step="0.1" value="1.5" title="峰位噪声 σ (kHz)">
-        <span class="val" id="vSig" style="font-size:12px;color:var(--ink2)">σ = 1.5 kHz</span>
+        <label class="switch">信道噪声
+          <input type="range" id="sigma" min="0" max="10" step="0.5" value="4" style="width:110px">
+        </label>
+        <span class="val" id="vSig" style="font-size:12px;color:var(--ink2)">中（4/10）</span>
       </div>
     </div>
   </section>
 
-  <!-- 右：频谱 + 解耦 -->
+  <!-- 右：测量侧 -->
   <section class="panel">
-    <h2>反射谱 · 三配方并读（数值 = 论文标定参数 + 噪声）</h2>
-    <div class="spectra">
-      <div class="spec sP"><div class="name">压力凝胶</div><div class="df" id="dP">f₀ = 8.98 MHz</div><canvas id="cP"></canvas></div>
-      <div class="spec sT"><div class="name">温度凝胶</div><div class="df" id="dT">f₀ = 8.42 MHz</div><canvas id="cT"></canvas></div>
-      <div class="spec sPh"><div class="name">pH 凝胶</div><div class="df" id="dPh">f₀ = 9.47 MHz</div><canvas id="cPh"></canvas></div>
+    <h2>① 原始信号 · 三通道回波 r(t)（实时，含噪声）</h2>
+    <div class="triple">
+      <div class="chan sP"><div class="name">压力凝胶通道</div><div class="info">门控段 512 样本</div><canvas id="wP"></canvas></div>
+      <div class="chan sT"><div class="name">温度凝胶通道</div><div class="info">fs = 60 MS/s</div><canvas id="wT"></canvas></div>
+      <div class="chan sPh"><div class="name">pH 凝胶通道</div><div class="info">载频 ≈ 9 MHz</div><canvas id="wPh"></canvas></div>
     </div>
-    <h2 style="border-top:1px solid var(--line)">解耦反演 · 三路峰移 → 三参数（3×3 矩阵求逆）</h2>
+
+    <h2>② 解调管线（点击运算，从 r(t) 现场拆谱）</h2>
+    <div class="pipe">
+      <div class="step" id="st1"><span class="no">1</span>门控截取</div>
+      <div class="step" id="st2"><span class="no">2</span>10 帧叠加</div>
+      <div class="step" id="st3"><span class="no">3</span>零填充 FFT</div>
+      <div class="step" id="st4"><span class="no">4</span>包络平滑</div>
+      <div class="step" id="st5"><span class="no">5</span>峰位追踪</div>
+    </div>
+    <div class="runrow">
+      <button id="bRun" class="primary">▶ 运算 · 解调三通道</button>
+      <span id="runNote" style="font-size:12px;color:var(--ink2)">参数变化后需重新运算</span>
+    </div>
+
+    <h2>③ 解调谱 |R(f)|（由信号算出，非预画）</h2>
+    <div class="triple">
+      <div class="chan sP"><div class="name">压力通道谱</div><div class="info" id="iP">—</div><canvas id="cP"></canvas><div class="stale" id="zP">参数已变 · 数据过期</div></div>
+      <div class="chan sT"><div class="name">温度通道谱</div><div class="info" id="iT">—</div><canvas id="cT"></canvas><div class="stale" id="zT">参数已变 · 数据过期</div></div>
+      <div class="chan sPh"><div class="name">pH 通道谱</div><div class="info" id="iPh">—</div><canvas id="cPh"></canvas><div class="stale" id="zPh">参数已变 · 数据过期</div></div>
+    </div>
+
+    <h2>④ 反演 · 三路峰移 → 参数估计（vs 真值）</h2>
     <div class="decoupled">
       <table class="mini">
-        <thead><tr><th>参数</th><th>真实值</th><th>反演值（含噪）</th><th>误差</th></tr></thead>
+        <thead><tr><th>参数</th><th>真值（隐藏）</th><th>反演估计</th><th>误差</th></tr></thead>
         <tbody>
           <tr><td style="color:var(--p)">压力 (mmHg)</td><td id="tP">–</td><td id="eP">–</td><td class="err" id="rP">–</td></tr>
           <tr><td style="color:var(--t)">温度 (°C)</td><td id="tT">–</td><td id="eT">–</td><td class="err" id="rT">–</td></tr>
@@ -136,39 +166,38 @@
       </table>
     </div>
     <div class="footnote">
-      <b>参数出处（论文 Fig. 2 标定，S 级）</b>：压力 0–70 mmHg / 5.7 kHz·mmHg⁻¹（相对斜率 6.34×10⁻⁴）；温度 28–43 °C / ≈80 kHz·°C⁻¹（0.0095）；
-      pH 8.0→2.0 / 256.4 kHz·pH⁻¹（0.02708）；f₀ = 8.98 / 8.42 / 9.47 MHz。<br>
-      <b>简化假设</b>：三凝胶对非目标参数的交叉灵敏度论文未给出数值，本演示设为近零理想值；
-      论文原口径为"效应独立近线性，两支凝胶同步测量即可解耦"，本页用 3×3 反演仅为演示直观。
-      反射谱画为示意高斯峰，非真实谱形。
+      <b>合成物理（窄带回波模型）</b>：带隙反射峰窄，回波近似为以峰频振荡的射频段——参数改变峰频即改变载频；
+      帧间相位确定、噪声随机，10 帧叠加平均只压噪声（√10）。解调管线忠于论文开源代码（MATLAB 复现）：
+      门控 → 10 帧叠加 → 零填充 FFT（16384 点）→ 滑动峰值包络 → 窗内峰位 + 抛物线插值；
+      反演前先以无噪基线解调做<b>仪器校零</b>（吸收包络/窗口系统偏置，对应论文一切频移相对基线测量），
+      再解 3×3 线性方程组。<b>把噪声调大再运算</b>，观察反演误差恶化——这就是信噪比的代价。
     </div>
   </section>
-</main>
+</div>
 
 <footer>
   <span>理想化教学演示 · 数值内核忠于论文标定 · <a href="https://github.com/TonaliNoHitsuzi/metagel-simulator">GitHub 源码</a></span>
-  <span>信号处理管线复现：门控 → 10 帧叠加 → 零填充 FFT → 包络 → 自适应峰位追踪（MATLAB，谱分辨率 ≈45 Hz）</span>
+  <span>论文管线 MATLAB 本地复现：谱分辨率 ≈45 Hz · 示例 pH 会话漂移 +50.2 kHz</span>
 </footer>
 
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-/* ---------------- 物理引擎（论文真实参数） ---------------- */
-// 相对频移 Δf/f0 = kP·ΔP + kT·ΔT + kPh·ΔpH（ΔT 相对 28°C 基线，ΔpH 相对 8.0 基线）
+const $ = id => document.getElementById(id);
+
+/* ============ 物理参数（论文 Fig.2 标定） ============ */
 const GELS = {
-  P : { f0: 8.98e6, kP: 6.343e-4, kT: 5e-6,  kPh: 2.0e-4 },
-  T : { f0: 8.42e6, kP: 5.0e-5,  kT: 9.5e-3, kPh: 5.0e-4 },
-  Ph: { f0: 9.47e6, kP: 5.0e-5,  kT: 1.0e-4, kPh: 2.708e-2 },
+  P : { f0: 8.98e6, kP: 6.343e-4, kT: 5e-6,  kPh: 2.0e-4, seed: 11 },
+  T : { f0: 8.42e6, kP: 5.0e-5,  kT: 9.5e-3, kPh: 5.0e-4, seed: 23 },
+  Ph: { f0: 9.47e6, kP: 5.0e-5,  kT: 1.0e-4, kPh: 2.708e-2, seed: 37 },
 };
 const BASE = { P: 0, T: 28, Ph: 8.0 };
 const state = { P: 10, T: 37, Ph: 7.4 };
-// URL 参数预设（?P=70&T=43&Ph=2）
 const urlp = new URLSearchParams(location.search);
 for(const k of ['P','T','Ph']){ const v = parseFloat(urlp.get(k)); if(!isNaN(v)) state[k] = v; }
-const disp  = { ...state };   // 平滑显示值
+const disp = { ...state };
 
-// 每凝胶频谱窗口：滑块全量程响应包络 + 边距（保证峰全程可见）
 for(const key of Object.keys(GELS)){
   const g = GELS[key];
   let lo = Infinity, hi = -Infinity;
@@ -176,193 +205,289 @@ for(const key of Object.keys(GELS)){
     const d = g.kP*(P-BASE.P) + g.kT*(T-BASE.T) + g.kPh*(Ph-BASE.Ph);
     lo = Math.min(lo, d); hi = Math.max(hi, d);
   }
-  const margin = (hi-lo)*0.18 + 0.02;           // 相对频移量纲的边距
-  g.wLo = g.f0 + (lo - margin);                  // Hz
-  g.wHi = g.f0 + (hi + margin);
+  const margin = (hi-lo)*0.20 + 0.02;
+  g.wLo = g.f0 * (1 + lo - margin); g.wHi = g.f0 * (1 + hi + margin);   // 相对频移×f₀ → 绝对频率
 }
-
 function deltaF(g, s = state){
   return g.f0 * ( g.kP*(s.P-BASE.P) + g.kT*(s.T-BASE.T) + g.kPh*(s.Ph-BASE.Ph) );
 }
 let gaussian = (m=0,s=1)=>{ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random();
   return m + s*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
 
-/* ---------------- 3D 场景 ---------------- */
-const canvas = document.getElementById('stage');
+/* ============ 信号合成与解调管线 ============ */
+const FS = 60e6;               // 采样率
+const NSIG = 512;              // 门控段样本（显示 + 运算输入）
+const NFFT = 16384;            // 零填充 FFT 点数
+const noiseAmp = ()=> parseFloat($('sigma').value)/10;   // 0..1
+
+// 确定性相位（同一凝胶同一谱线的相位固定——真实反射系数谱是确定的，帧平均才能保信号压噪声）
+function phaseOf(k, seed){
+  let h = (Math.imul(k, 2654435761) + Math.imul(seed, 40503)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  return ((h ^ (h >>> 16)) / 4294967296) * 2 * Math.PI;
+}
+const GEL_SEED = { P: 11, T: 23, Ph: 37 };
+void GEL_SEED;
+
+// 生成一帧门控回波：窄带回波模型——带隙反射峰窄，回波近似以峰频振荡的射频段（软边缘包络）
+function synthFrame(g, s = state, noise = true){
+  const fpk = g.f0 + deltaF(g, s);
+  const ph0 = phaseOf(1, g.seed);                       // 每凝胶固定初始相位（帧间确定）
+  const out = new Float64Array(NSIG);
+  for(let i=0;i<NSIG;i++){
+    const t = i/FS;
+    const w = Math.sin(Math.PI*(i+0.5)/NSIG);           // 半余弦包络
+    out[i] = w*Math.cos(2*Math.PI*fpk*t + ph0) + (noise? gaussian(0, noiseAmp()*0.15) : 0);
+  }
+  return out;
+}
+function fftInPlace(re, im){
+  const n = re.length;
+  for(let i=1,j=0;i<n;i++){                   // 位反转
+    let bit = n>>1;
+    for(; j & bit; bit >>=1) j ^= bit;
+    j |= bit;
+    if(i<j){ [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; }
+  }
+  for(let len=2; len<=n; len<<=1){
+    const ang = -2*Math.PI/len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for(let i=0;i<n;i+=len){
+      let cwr=1, cwi=0;
+      for(let k=0;k<len/2;k++){
+        const ur=re[i+k], ui=im[i+k];
+        const vr=re[i+k+len/2]*cwr - im[i+k+len/2]*cwi;
+        const vi=re[i+k+len/2]*cwi + im[i+k+len/2]*cwr;
+        re[i+k]=ur+vr; im[i+k]=ui+vi;
+        re[i+k+len/2]=ur-vr; im[i+k+len/2]=ui-vi;
+        const t=cwr*wr-cwi*wi; cwi=cwr*wi+cwi*wr; cwr=t;
+      }
+    }
+  }
+}
+// 完整合成：10 帧平均（管线第 2 步），返回平均后时域
+function acquire(g){
+  const frames = 10;
+  const acc = new Float64Array(NSIG);
+  for(let f=0; f<frames; f++){
+    const fr = synthFrame(g, state, true);
+    for(let i=0;i<NSIG;i++) acc[i]+=fr[i];
+  }
+  for(let i=0;i<NSIG;i++) acc[i]/=frames;
+  return acc;
+}
+// 解调：零填充 FFT → 幅度 → 包络 → 峰位（抛物线插值）
+function demodulate(g, sig){
+  const re = new Float64Array(NFFT), im = new Float64Array(NFFT);
+  for(let i=0;i<NSIG;i++) re[i] = sig[i];                     // 零填充
+  fftInPlace(re, im);
+  const df = FS/NFFT;
+  const k0 = Math.round(g.wLo/df), k1 = Math.round(g.wHi/df);
+  const n = k1-k0+1;
+  const amp = new Float64Array(n);
+  for(let k=0;k<n;k++){ const j=k0+k; amp[k] = Math.hypot(re[j], im[j]); }
+  // 滑动峰值包络（论文 envelope 'peak' 的等效简化）
+  const W = Math.max(3, Math.round(n*0.02));
+  const env = new Float64Array(n);
+  for(let k=0;k<n;k++){ let m=0; for(let w=-W;w<=W;w++){ const j=k+w; if(j>=0&&j<n) m=Math.max(m,amp[j]); } env[k]=m; }
+  // 峰位 + 三点抛物线插值
+  let pk=0; for(let k=1;k<n;k++) if(env[k]>env[pk]) pk=k;
+  const y0=env[Math.max(0,pk-1)], y1=env[pk], y2=env[Math.min(n-1,pk+1)];
+  const denom = (y0-2*y1+y2);
+  const shift = denom? 0.5*(y0-y2)/denom : 0;
+  const fPeak = (k0+pk+shift)*df;
+  return { freqs: Array.from({length:n},(_,i)=>(k0+i)*df), amp, env, fPeak };
+}
+// 基线标定（仪器校零）：无噪基线解调，吸收包络/窗口引入的系统偏置——对应论文中一切频移相对基线测量
+for(const k of Object.keys(GELS)) GELS[k].fCal = demodulate(GELS[k], synthFrame(GELS[k], BASE, false)).fPeak;
+
+/* ============ 绘制 ============ */
+function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function setupCanvas(cv){
+  const dpr = Math.min(devicePixelRatio,2), W = cv.clientWidth, H = cv.clientHeight;
+  if(cv.width !== W*dpr){ cv.width = W*dpr; cv.height = H*dpr; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,W,H};
+}
+function drawWave(id, sig){
+  const {ctx,W,H} = setupCanvas($(id));
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle = getCSS('--line');
+  ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+  let mx=0; for(const v of sig) mx=Math.max(mx,Math.abs(v));
+  if(!mx) mx=1;
+  ctx.strokeStyle = getCSS('--accent'); ctx.lineWidth = 1; ctx.beginPath();
+  for(let i=0;i<sig.length;i++){
+    const x=i/(sig.length-1)*W, y=H/2 - sig[i]/(mx*1.15)*H/2;
+    i? ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.stroke();
+}
+function drawSpec(id, g, d){
+  const {ctx,W,H} = setupCanvas($(id));
+  ctx.clearRect(0,0,W,H);
+  const lo=g.wLo, hi=g.wHi, X=f=>(f-lo)/(hi-lo)*W;
+  let mx=0; for(const v of d.env) mx=Math.max(mx,v); if(!mx)mx=1;
+  ctx.strokeStyle=getCSS('--line');
+  for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(W*i/4,0); ctx.lineTo(W*i/4,H); ctx.stroke(); }
+  ctx.setLineDash([4,4]); ctx.strokeStyle=getCSS('--ink2');
+  ctx.beginPath(); ctx.moveTo(X(g.f0),0); ctx.lineTo(X(g.f0),H); ctx.stroke(); ctx.setLineDash([]);
+  const Y=v=>H-4-v/mx*(H-14);
+  ctx.strokeStyle=getCSS('--ink2'); ctx.globalAlpha=.5; ctx.beginPath();     // 原始幅度谱
+  d.amp.forEach((v,i)=>{ const x=X(d.freqs[i]),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke(); ctx.globalAlpha=1;
+  ctx.strokeStyle=getCSS('--accent'); ctx.lineWidth=1.6; ctx.beginPath();    // 包络
+  d.env.forEach((v,i)=>{ const x=X(d.freqs[i]),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke();
+  ctx.strokeStyle=getCSS('--rose'); ctx.lineWidth=1.4;                       // 峰位
+  ctx.beginPath(); ctx.moveTo(X(d.fPeak),0); ctx.lineTo(X(d.fPeak),H); ctx.stroke();
+  ctx.fillStyle=getCSS('--ink2'); ctx.font='10px system-ui';
+  ctx.fillText((lo/1e6).toFixed(2),2,H-2); ctx.fillText((hi/1e6).toFixed(2)+' MHz',W-62,H-2);
+}
+
+/* ============ 3D（沿用） ============ */
+const canvas = $('stage');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(38, 1, .1, 100);
-camera.position.set(4.2, 3.2, 5.0);
+const camera = new THREE.PerspectiveCamera(38,1,.1,100);
+camera.position.set(4.2,3.2,5.0);
 const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true; controls.target.set(0,0,0);
-
-scene.add(new THREE.AmbientLight(0xffffff, .55));
-const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(5,7,4); scene.add(key);
-const rim = new THREE.DirectionalLight(0x3ec6b5, .35); rim.position.set(-6,-2,-5); scene.add(rim);
-scene.add(new THREE.GridHelper(14, 14, 0x2a3242, 0x222834).translateY(-1.9));
-
-const N = 5, GAP = 0.62, HALF = (N-1)/2;
-const box = new THREE.Mesh(
-  new THREE.BoxGeometry(N*GAP*1.16, N*GAP*1.16, N*GAP*1.16),
-  new THREE.MeshPhysicalMaterial({ color:0x9fd8d0, transparent:true, opacity:.30,
-    roughness:.25, metalness:0, transmission:0, clearcoat:.6 }));
+controls.enableDamping = true;
+scene.add(new THREE.AmbientLight(0xffffff,.55));
+const key = new THREE.DirectionalLight(0xffffff,1.1); key.position.set(5,7,4); scene.add(key);
+const rim = new THREE.DirectionalLight(0x3ec6b5,.35); rim.position.set(-6,-2,-5); scene.add(rim);
+scene.add(new THREE.GridHelper(14,14,0x2a3242,0x222834).translateY(-1.9));
+const N=5, GAP=.62, HALF=(N-1)/2;
+const box = new THREE.Mesh(new THREE.BoxGeometry(N*GAP*1.16,N*GAP*1.16,N*GAP*1.16),
+  new THREE.MeshPhysicalMaterial({color:0x9fd8d0,transparent:true,opacity:.30,roughness:.25,clearcoat:.6}));
 scene.add(box);
-
-const colGeo = new THREE.CylinderGeometry(.155, .155, N*GAP*1.30, 20);
-const colMat = new THREE.MeshStandardMaterial({ color:0xdfe8f2, roughness:.35,
-  transparent:true, opacity:.88 });
-const cols = new THREE.InstancedMesh(colGeo, colMat, N*N*N);
+const cols = new THREE.InstancedMesh(new THREE.CylinderGeometry(.155,.155,N*GAP*1.30,20),
+  new THREE.MeshStandardMaterial({color:0xdfe8f2,roughness:.35,transparent:true,opacity:.88}), N*N*N);
 scene.add(cols);
 const m4 = new THREE.Matrix4();
-function layoutCols(sx, sy, sz){
-  let i = 0;
+function layoutCols(sx,sy,sz){
+  let i=0;
   for(let x=0;x<N;x++)for(let y=0;y<N;y++)for(let z=0;z<N;z++){
-    m4.makeScale(1/Math.sqrt(sx), 1/Math.sqrt(sy), 1/Math.sqrt(sz));   // 孔径随拉伸反变换（体积感）
-    m4.setPosition((x-HALF)*GAP*sx, (y-HALF)*GAP*sy, (z-HALF)*GAP*sz);
-    cols.setMatrixAt(i++, m4);
+    m4.makeScale(1/Math.sqrt(sx),1/Math.sqrt(sy),1/Math.sqrt(sz));
+    m4.setPosition((x-HALF)*GAP*sx,(y-HALF)*GAP*sy,(z-HALF)*GAP*sz);
+    cols.setMatrixAt(i++,m4);
   }
   cols.instanceMatrix.needsUpdate = true;
-  box.scale.set(sx, sy, sz);
+  box.scale.set(sx,sy,sz);
 }
-
-// 形变映射：压力压缩 / PNIPAM 温缩 / 壳聚糖酸胀（理想化）
 function targetScale(s){
-  const cP = 1 - 0.16*(s.P/70);                       // 0-70 mmHg → 最多 16% 压缩
-  const cT = s.T>32 ? 1 - 0.10*((s.T-32)/11) : 1;     // LCST 32°C 以上收缩
-  const cA = 1 + 0.12*((8.0-s.Ph)/6.0);               // 酸性溶胀
-  return { x: cA/Math.sqrt(cP), y: cA/Math.sqrt(cP), z: cP*cA };
+  const cP = 1-.16*(s.P/70);
+  const cT = s.T>32? 1-.10*((s.T-32)/11) : 1;
+  const cA = 1+.12*((8.0-s.Ph)/6.0);
+  return { x:cA/Math.sqrt(cP), y:cA/Math.sqrt(cP), z:cP*cA };
 }
 
-/* ---------------- 频谱绘制 ---------------- */
-function drawSpec(id, gel, noiseHz){
-  const cv = document.getElementById(id), ctx = cv.getContext('2d');
-  const dpr = Math.min(devicePixelRatio,2), W = cv.clientWidth, H = cv.clientHeight;
-  if(cv.width !== W*dpr){ cv.width = W*dpr; cv.height = H*dpr; }
-  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
-  const f0 = gel.f0/1e6, df = (deltaF(gel)+noiseHz)/1e6;
-  const lo = gel.wLo/1e6, hi = gel.wHi/1e6, span = hi - lo;
-  const X = f => (f-lo)/span*W;
-  // 背景网格
-  ctx.strokeStyle = getCSS('--line'); ctx.lineWidth = 1;
-  for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(W*i/4,0); ctx.lineTo(W*i/4,H); ctx.stroke(); }
-  // 基准虚线（f0）
-  ctx.setLineDash([4,4]); ctx.strokeStyle = getCSS('--ink2');
-  ctx.beginPath(); ctx.moveTo(X(f0),0); ctx.lineTo(X(f0),H); ctx.stroke(); ctx.setLineDash([]);
-  // 高斯峰（宽度随窗口宽度缩放，保持视觉比例）
-  const sig = span*0.085, fk = f0 + df;
-  ctx.beginPath();
-  for(let px=0; px<=W; px++){
-    const f = lo + span*px/W;
-    const a = Math.exp(-((f-fk)**2)/(2*sig*sig));
-    const y = H-6 - a*(H-16) + gaussian(0,0.006)*(H-16);
-    px? ctx.lineTo(px,y) : ctx.moveTo(px,y);
-  }
-  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
-  ctx.fillStyle = getCSS('--accent'); ctx.globalAlpha = .28; ctx.fill(); ctx.globalAlpha = 1;
-  ctx.strokeStyle = getCSS('--accent'); ctx.lineWidth = 1.6; ctx.stroke();
-  // 刻度
-  ctx.fillStyle = getCSS('--ink2'); ctx.font = '10px system-ui';
-  ctx.fillText(lo.toFixed(1), 2, H-2);
-  ctx.fillText(hi.toFixed(1)+' MHz', W-56, H-2);
-}
-function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
-
-/* ---------------- 主循环 ---------------- */
-const fmt = (x,d=1)=>x.toFixed(d);
-let lastNoise = {P:0,T:0,Ph:0}, noiseTimer = 0;
-
+/* ============ 主循环：参数→3D+原始信号 ============ */
+let waveTimer = 0;
 function tick(t){
-  // 平滑
-  for(const k of ['P','T','Ph']) disp[k] += (state[k]-disp[k]) * 0.12;
+  for(const k of ['P','T','Ph']) disp[k] += (state[k]-disp[k])*.12;
   const s = targetScale(disp);
-  layoutCols(s.x, s.y, s.z);
-  controls.update(); renderer.render(scene, camera);
-
-  // 每 600ms 刷新一次噪声（模拟一次测量）
-  if(t - noiseTimer > 600){
-    noiseTimer = t;
-    const on = document.getElementById('noise').checked;
-    const sig = parseFloat(document.getElementById('sigma').value)*1e3;
-    for(const k of ['P','T','Ph']) lastNoise[k] = on? gaussian(0,sig) : 0;
-    // 三路频谱
-    drawSpec('cP',  GELS.P,  lastNoise.P);
-    drawSpec('cT',  GELS.T,  lastNoise.T);
-    drawSpec('cPh', GELS.Ph, lastNoise.Ph);
-    // 读数
-    document.getElementById('dP').textContent  = `Δf = ${(deltaF(GELS.P)/1e3).toFixed(1)} kHz`;
-    document.getElementById('dT').textContent  = `Δf = ${(deltaF(GELS.T)/1e3).toFixed(1)} kHz`;
-    document.getElementById('dPh').textContent = `Δf = ${(deltaF(GELS.Ph)/1e3).toFixed(1)} kHz`;
-    decouple();
+  layoutCols(s.x,s.y,s.z);
+  controls.update(); renderer.render(scene,camera);
+  if(t - waveTimer > 400){                    // 原始信号 ~2.5 Hz 刷新（模拟连续采集）
+    waveTimer = t;
+    drawWave('wP', synthFrame(GELS.P));
+    drawWave('wT', synthFrame(GELS.T));
+    drawWave('wPh',synthFrame(GELS.Ph));
   }
   requestAnimationFrame(tick);
 }
 
-function decouple(){
-  const K = [ [GELS.P.kP,  GELS.P.kT,  GELS.P.kPh ],
-              [GELS.T.kP,  GELS.T.kT,  GELS.T.kPh ],
-              [GELS.Ph.kP, GELS.Ph.kT, GELS.Ph.kPh] ];
-  const y = ['P','T','Ph'].map(k => deltaF(GELS[k], state) + lastNoise[k])  // 含噪相对频移
-            .map((v,i) => v / [GELS.P,GELS.T,GELS.Ph][i].f0);
-  const x = solve3(K, y);   // [ΔP, ΔT, ΔpH]
-  const est = { P: x[0]+BASE.P, T: x[1]+BASE.T, Ph: x[2]+BASE.Ph };
-  put('tP', state.P.toFixed(1)); put('eP', est.P.toFixed(1)); put('rP', (est.P-state.P).toFixed(2));
-  put('tT', state.T.toFixed(1)); put('eT', est.T.toFixed(1)); put('rT', (est.T-state.T).toFixed(2));
-  put('tPh', state.Ph.toFixed(2)); put('ePh', est.Ph.toFixed(2)); put('rPh', (est.Ph-state.Ph).toFixed(3));
-}
-function put(id,v){ document.getElementById(id).textContent = v; }
-
-function solve3(K, y){
-  const M = K.map((r,i)=>[...r, y[i]]);
+/* ============ 运算：分步点亮管线 ============ */
+function solve3(K,y){
+  const M=K.map((r,i)=>[...r,y[i]]);
   for(let c=0;c<3;c++){
-    let p = c; for(let r=c+1;r<3;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p=r;
-    [M[c],M[p]] = [M[p],M[c]];
-    const d = M[c][c]; for(let j=c;j<4;j++) M[c][j]/=d;
-    for(let r=0;r<3;r++) if(r!==c){ const f=M[r][c]; for(let j=c;j<4;j++) M[r][j]-=f*M[c][j]; }
+    let p=c; for(let r=c+1;r<3;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+    [M[c],M[p]]=[M[p],M[c]];
+    const d=M[c][c]; for(let j=c;j<4;j++)M[c][j]/=d;
+    for(let r=0;r<3;r++) if(r!==c){ const f=M[r][c]; for(let j=c;j<4;j++)M[r][j]-=f*M[c][j]; }
   }
-  return [M[0][3], M[1][3], M[2][3]];
+  return [M[0][3],M[1][3],M[2][3]];
 }
+$('bRun').addEventListener('click', ()=>{
+  const btn = $('bRun'); btn.disabled = true;
+  const steps = ['st1','st2','st3','st4','st5'].map($);
+  steps.forEach(s=>s.classList.remove('lit','done'));
+  $('runNote').textContent = '运算中…';
+  ['zP','zT','zPh'].forEach(id=>$(id).classList.remove('on'));
+  const gelOrder = ['P','T','Ph'];
+  const stepMs = 480;
+  steps.forEach((s,i)=> setTimeout(()=>{
+    s.classList.add('lit');
+    if(i===2){                                  // 零填充 FFT 步：正式采集+解调
+      const res = {};
+      for(const k of gelOrder) res[k] = demodulate(GELS[k], acquire(GELS[k]));
+      window._lastRes = res;
+    }
+  }, i*stepMs));
+  setTimeout(()=>{
+    steps.forEach(s=>{ s.classList.remove('lit'); s.classList.add('done'); });
+    const res = window._lastRes;
+    const K = [ [GELS.P.kP,GELS.P.kT,GELS.P.kPh],[GELS.T.kP,GELS.T.kT,GELS.T.kPh],[GELS.Ph.kP,GELS.Ph.kT,GELS.Ph.kPh] ];
+    const y = gelOrder.map((k,i)=> (res[k].fPeak - GELS[k].fCal)/GELS[k].f0);   // 基线校零后的频移
+    const x = solve3(K,y);
+    drawSpec('cP',GELS.P,res.P);   drawSpec('cT',GELS.T,res.T);   drawSpec('cPh',GELS.Ph,res.Ph);
+    $('iP').textContent  = `峰 ${(res.P.fPeak/1e6).toFixed(4)} MHz · Δ校零 ${((res.P.fPeak-GELS.P.fCal)/1e3).toFixed(1)} kHz`;
+    $('iT').textContent  = `峰 ${(res.T.fPeak/1e6).toFixed(4)} MHz · Δ校零 ${((res.T.fPeak-GELS.T.fCal)/1e3).toFixed(1)} kHz`;
+    $('iPh').textContent = `峰 ${(res.Ph.fPeak/1e6).toFixed(4)} MHz · Δ校零 ${((res.Ph.fPeak-GELS.Ph.fCal)/1e3).toFixed(1)} kHz`;
+    const est = { P:x[0]+BASE.P, T:x[1]+BASE.T, Ph:x[2]+BASE.Ph };
+    put('tP',state.P.toFixed(1)); put('eP',est.P.toFixed(1)); put('rP',(est.P-state.P).toFixed(2));
+    put('tT',state.T.toFixed(1)); put('eT',est.T.toFixed(1)); put('rT',(est.T-state.T).toFixed(2));
+    put('tPh',state.Ph.toFixed(2)); put('ePh',est.Ph.toFixed(2)); put('rPh',(est.Ph-state.Ph).toFixed(3));
+    $('runNote').textContent = '完成 · 参数变化后请重新运算';
+    btn.disabled = false;
+  }, steps.length*stepMs + 200);
+});
+function put(id,v){ $(id).textContent=v; }
 
-/* ---------------- 事件 ---------------- */
-const $ = id => document.getElementById(id);
-function bind(sid, vid, key, unit, d){
+/* ============ 事件 ============ */
+function bind(sid,vid,key,unit,d){
   $(sid).addEventListener('input', e=>{
     state[key] = parseFloat(e.target.value);
-    $(vid).textContent = state[key].toFixed(d) + unit;
+    $(vid).textContent = state[key].toFixed(d)+unit;
+    ['zP','zT','zPh'].forEach(id=>$(id).classList.add('on'));   // 谱过期
   });
 }
 bind('sP','vP','P',' mmHg',1);
 bind('sT','vT','T',' °C',1);
 bind('sPh','vPh','Ph','',2);
-$('sigma').addEventListener('input', e=> $('vSig').textContent = `σ = ${parseFloat(e.target.value).toFixed(1)} kHz`);
-
-function animTo(s){ const t0 = performance.now();
-  const from = {...state};
-  const step = t=>{ const k = Math.min(1,(t-t0)/900), e = 1-Math.pow(1-k,3);
-    for(const key of ['P','T','Ph']) state[key] = from[key]+(s[key]-from[key])*e;
+$('sigma').addEventListener('input', e=>{
+  const v = parseFloat(e.target.value);
+  $('vSig').textContent = v<2? '极低': v<5? '低': v<7? '中': v<9? '高': '极高';
+});
+$('sigma').dispatchEvent(new Event('input'));
+function animTo(s){
+  const t0=performance.now(), from={...state};
+  const step=t=>{ const k=Math.min(1,(t-t0)/900), e=1-Math.pow(1-k,3);
+    for(const key of ['P','T','Ph']) state[key]=from[key]+(s[key]-from[key])*e;
     $('sP').value=state.P; $('vP').textContent=state.P.toFixed(1)+' mmHg';
     $('sT').value=state.T; $('vT').textContent=state.T.toFixed(1)+' °C';
     $('sPh').value=state.Ph; $('vPh').textContent=state.Ph.toFixed(2);
+    ['zP','zT','zPh'].forEach(id=>$(id).classList.add('on'));
     if(k<1) requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
-$('bP').onclick  = ()=> animTo({P:55, T:37, Ph:7.4});
-$('bT').onclick  = ()=> animTo({P:10, T:41.5, Ph:7.4});
-$('bPh').onclick = ()=> animTo({P:10, T:37, Ph:4.0});
-$('bMix').onclick= ()=> animTo({P:38, T:40.5, Ph:5.5});
-$('bReset').onclick = ()=> animTo({P:10, T:37, Ph:7.4});
-
-// URL 预设初始同步滑块与读数
+$('bP').onclick  = ()=>animTo({P:55,T:37,Ph:7.4});
+$('bT').onclick  = ()=>animTo({P:10,T:41.5,Ph:7.4});
+$('bPh').onclick = ()=>animTo({P:10,T:37,Ph:4.0});
+$('bMix').onclick= ()=>animTo({P:38,T:40.5,Ph:5.5});
+$('bReset').onclick = ()=>animTo({P:10,T:37,Ph:7.4});
+// URL 预设同步
 $('sP').value=state.P;  $('vP').textContent=state.P.toFixed(1)+' mmHg';
 $('sT').value=state.T;  $('vT').textContent=state.T.toFixed(1)+' °C';
 $('sPh').value=state.Ph; $('vPh').textContent=state.Ph.toFixed(2);
-
 function resize(){
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  renderer.setSize(w,h,false); camera.aspect = w/h; camera.updateProjectionMatrix();
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(canvas); resize();
 requestAnimationFrame(tick);
+setTimeout(()=>$('bRun').click(), 900);   // 加载后自动演示一次完整测量闭环
 </script>
 </body>
 </html>

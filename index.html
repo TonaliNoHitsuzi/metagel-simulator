@@ -132,17 +132,17 @@
 
   <!-- 右：测量侧 -->
   <section class="panel">
-    <h2>① 原始信号 · 三通道（波形 + 实时瀑布，点击选通道进入管线演示）</h2>
+    <h2>① 实时监视 · 示波器模式（波形 + 粗谱瀑布 ≈59 kHz/bin——只够看峰移动，不能定量）</h2>
     <div class="triple">
-      <div class="chan sP sel" id="chP"><div class="name">压力凝胶通道</div><div class="info">峰频≈9 MHz</div>
-        <canvas class="wave" id="wP"></canvas><canvas class="fall" id="fP"></canvas><div class="stale" id="zP">参数已变 · 数据过期</div></div>
-      <div class="chan sT" id="chT"><div class="name">温度凝胶通道</div><div class="info">fs = 60 MS/s</div>
-        <canvas class="wave" id="wT"></canvas><canvas class="fall" id="fT"></canvas><div class="stale" id="zT">参数已变 · 数据过期</div></div>
-      <div class="chan sPh" id="chPh"><div class="name">pH 凝胶通道</div><div class="info">瀑布 = 短时谱</div>
-        <canvas class="wave" id="wPh"></canvas><canvas class="fall" id="fPh"></canvas><div class="stale" id="zPh">参数已变 · 数据过期</div></div>
+      <div class="chan sP sel" id="chP"><div class="name">压力凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
+        <canvas class="wave" id="wP"></canvas><canvas class="fall" id="fP"></canvas><div class="stale" id="zP">被测对象已变化 · 上次测量作废</div></div>
+      <div class="chan sT" id="chT"><div class="name">温度凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
+        <canvas class="wave" id="wT"></canvas><canvas class="fall" id="fT"></canvas><div class="stale" id="zT">被测对象已变化 · 上次测量作废</div></div>
+      <div class="chan sPh" id="chPh"><div class="name">pH 凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
+        <canvas class="wave" id="wPh"></canvas><canvas class="fall" id="fPh"></canvas><div class="stale" id="zPh">被测对象已变化 · 上次测量作废</div></div>
     </div>
 
-    <h2>② 解调管线（每一步都是真实中间量动画）</h2>
+    <h2>② 精确解调管线（对冻结帧运算 · 每一步都是真实中间量动画）</h2>
     <div class="pipe">
       <div class="step" id="st1"><span class="no">1</span>门控截取</div>
       <div class="step" id="st2"><span class="no">2</span>10 帧叠加</div>
@@ -152,11 +152,11 @@
     </div>
     <div class="stagebar"><canvas id="pipeStage"></canvas></div>
     <div class="runrow">
-      <button id="bRun" class="primary">▶ 运算 · 解调选中通道（三通道反演同步完成）</button>
-      <span id="runNote" style="font-size:12px;color:var(--ink2)">参数变化后需重新运算</span>
+      <button id="bRun" class="primary">▶ 冻结采样 · 精确解调（三通道同步测量）</button>
+      <span id="runNote" style="font-size:12px;color:var(--ink2)">监视是连续免费的；测量是离散快照——被测对象变化后，上次测量作废</span>
     </div>
 
-    <h2>③ 解调谱 |R(f)|（由信号算出）</h2>
+    <h2>③ 精确解调谱 |R(f)|（16k 点零填充 ≈3.7 kHz/bin · 冻结采样的一次性测量）</h2>
     <div class="triple">
       <div class="chan sP spec"><div class="name">压力通道谱</div><div class="info" id="iP">—</div><canvas id="cP"></canvas><div class="stale" id="zp">过期</div></div>
       <div class="chan sT spec"><div class="name">温度通道谱</div><div class="info" id="iT">—</div><canvas id="cT"></canvas><div class="stale" id="zt">过期</div></div>
@@ -175,10 +175,10 @@
       </table>
     </div>
     <div class="footnote">
-      <b>合成物理（窄带回波模型）</b>：带隙反射峰窄，回波近似为以峰频振荡的射频段——参数改变峰频即改变载频；
-      帧间相位确定、噪声随机，10 帧叠加平均只压噪声（√10）。瀑布图 = 滑动短时谱（示波器 FFT 模式的标准视图）：
-      <b>动一个参数，亮纹立刻横移</b>。解调管线忠于论文开源代码（MATLAB 复现）；反演前先以无噪基线解调做<b>仪器校零</b>，
-      再解 3×3 线性方程组。<b>把噪声调大再运算</b>，观察反演误差恶化——信噪比的代价。
+      <b>仪器双模式</b>：<b>连续监视</b>（示波器 FFT 模式，1024 点粗谱 ≈59 kHz/bin——免费、实时，只够看峰移动）+
+      <b>离散测量</b>（冻结一帧 → 16k 点零填充 ≈3.7 kHz/bin + 包络 + 抛物线插值 → 定量反演）。被测对象变化只作废测量，不中断监视。<br>
+      <b>合成物理（窄带回波模型）</b>：带隙反射峰窄，回波近似为以峰频振荡的射频段；帧间相位确定、噪声随机，10 帧叠加平均只压噪声（√10）。
+      反演前先以无噪基线解调做<b>仪器校零</b>，再解 3×3 线性方程组。<b>把噪声调大再测量</b>，观察反演误差恶化——信噪比的代价。
     </div>
   </section>
 </div>
@@ -527,6 +527,13 @@ function animate(dur, fn){               // setTimeout 驱动的进度动画（�
 }
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
+function markFall(id){                    // 在瀑布顶部打一条白色"冻结测量"标记线
+  const buf = fallBuf[id]; if(!buf) return;
+  const bctx = buf.getContext('2d');
+  bctx.fillStyle = 'rgba(255,255,255,.9)';
+  bctx.fillRect(0, 0, buf.width, 2);
+}
+
 /* ============ 运算序列 ============ */
 function solve3(K,y){
   const M=K.map((r,i)=>[...r,y[i]]);
@@ -545,7 +552,8 @@ $('bRun').addEventListener('click', async ()=>{
   const btn = $('bRun'); btn.disabled = true;
   const steps = ['st1','st2','st3','st4','st5'].map($);
   steps.forEach(s=>s.classList.remove('lit','done'));
-  $('runNote').textContent = '运算中…';
+  $('runNote').textContent = '冻结采样中…';
+  markFall('fP'); markFall('fT'); markFall('fPh');   // 三通道瀑布标记测量时刻
   ['zP','zT','zPh','zp','zt','zph'].forEach(id=>$(id).classList.remove('on'));
   const g = GELS[selected], key = selected;
   // 真实中间量
@@ -580,7 +588,7 @@ $('bRun').addEventListener('click', async ()=>{
   put('tP',state.P.toFixed(1)); put('eP',est.P.toFixed(1)); put('rP',(est.P-state.P).toFixed(2));
   put('tT',state.T.toFixed(1)); put('eT',est.T.toFixed(1)); put('rT',(est.T-state.T).toFixed(2));
   put('tPh',state.Ph.toFixed(2)); put('ePh',est.Ph.toFixed(2)); put('rPh',(est.Ph-state.Ph).toFixed(3));
-  $('runNote').textContent = '完成 · 参数变化后请重新运算';
+  $('runNote').textContent = '测量完成 · 被测对象变化后须重新冻结测量';
   btn.disabled = false; running = false;
 });
 function put(id,v){ $(id).textContent=v; }

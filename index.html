@@ -19,11 +19,11 @@
   header h1{font-size:19px;font-weight:700}
   header .sub{font-size:12.5px;color:var(--ink2)}
   header a{color:var(--accent);text-decoration:none}
-  .layout{display:grid;grid-template-columns:minmax(330px,.95fr) minmax(430px,1.05fr);gap:14px;padding:14px 22px}
-  @media (max-width:960px){ .layout{grid-template-columns:1fr} }
+  .layout{display:grid;grid-template-columns:minmax(330px,.92fr) minmax(460px,1.08fr);gap:14px;padding:14px 22px}
+  @media (max-width:980px){ .layout{grid-template-columns:1fr} }
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .panel h2{font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.06em;padding:10px 14px 8px;border-bottom:1px solid var(--line)}
-  #stage{width:100%;height:380px;display:block;cursor:grab}
+  #stage{width:100%;height:370px;display:block;cursor:grab}
   #stage:active{cursor:grabbing}
   .stage-note{padding:8px 14px;font-size:12px;color:var(--ink2);border-top:1px solid var(--line)}
   .controls{padding:13px 16px;display:flex;flex-direction:column;gap:13px}
@@ -42,26 +42,31 @@
   button:disabled{opacity:.45;cursor:wait}
   .switch{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink2);cursor:pointer;user-select:none}
   .switch input{accent-color:var(--accent)}
-  /* 通道小图 */
+  /* 通道瀑布卡 */
   .triple{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:12px 14px}
-  .chan{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;position:relative}
-  .chan .name{font-size:12px;font-weight:700;margin-bottom:2px}
-  .chan .info{font-size:11px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-bottom:4px;min-height:14px}
-  .chan canvas{width:100%;height:78px;display:block}
+  .chan{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;position:relative;cursor:pointer;transition:border-color .2s}
+  .chan.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .chan .name{font-size:12px;font-weight:700;margin-bottom:3px}
+  .chan .info{font-size:10.5px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-bottom:4px;min-height:13px}
+  .chan .wave{width:100%;height:26px;display:block}
+  .chan .fall{width:100%;height:92px;display:block;border-radius:6px}
   .sP .name{color:var(--p)} .sT .name{color:var(--t)} .sPh .name{color:var(--ph)}
   .stale{position:absolute;inset:0;border-radius:10px;background:color-mix(in srgb,var(--bg) 72%,transparent);
          display:flex;align-items:center;justify-content:center;font-size:11.5px;color:var(--gold);
-         text-align:center;padding:6px;opacity:0;pointer-events:none;transition:opacity .25s}
+         text-align:center;padding:6px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:2}
   .stale.on{opacity:1}
-  /* 管线 */
-  .pipe{display:flex;gap:6px;padding:12px 14px 4px;flex-wrap:wrap}
-  .step{flex:1;min-width:86px;text-align:center;font-size:11.5px;color:var(--ink2);
+  /* 管线舞台 */
+  .stagebar{padding:10px 14px 0}
+  #pipeStage{width:100%;height:190px;display:block;background:var(--panel2);border-radius:10px;margin-top:8px}
+  .pipe{display:flex;gap:6px;padding:12px 14px 0;flex-wrap:wrap}
+  .step{flex:1;min-width:88px;text-align:center;font-size:11.5px;color:var(--ink2);
         border:1px solid var(--line);border-radius:8px;padding:7px 4px;background:var(--panel2);
-        transition:all .3s;position:relative}
+        transition:all .25s}
   .step .no{display:block;font-size:10px;opacity:.7}
   .step.lit{color:var(--accent);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
   .step.done{color:var(--accent);border-color:var(--accent)}
-  .runrow{padding:8px 14px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .runrow{padding:10px 14px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .spec canvas{height:66px}
   /* 反演 */
   .decoupled{padding:12px 14px}
   table.mini{border-collapse:collapse;width:100%;font-size:13px}
@@ -91,11 +96,11 @@
 </header>
 
 <div class="layout">
-  <!-- 左：3D + 参数（真值，仅"大自然"知道） -->
+  <!-- 左：3D + 参数 -->
   <section class="panel">
     <h2>真实构象（参数是隐藏的真值，仪器看不到）</h2>
     <canvas id="stage"></canvas>
-    <div class="stage-note">拖动旋转 / 滚轮缩放。参数改变的是凝胶本身——仪器唯一能拿到的是右侧的原始回波。</div>
+    <div class="stage-note">拖动旋转 / 滚轮缩放。参数只改变凝胶本身——仪器唯一能拿到的是右侧的原始回波：上方波形 + 实时瀑布（亮纹位置=峰频）。</div>
     <div class="controls">
       <div class="ctl p">
         <label><span class="name">压力 P</span><span class="val" id="vP">10 mmHg</span></label>
@@ -127,14 +132,17 @@
 
   <!-- 右：测量侧 -->
   <section class="panel">
-    <h2>① 原始信号 · 三通道回波 r(t)（实时，含噪声）</h2>
+    <h2>① 原始信号 · 三通道（波形 + 实时瀑布，点击选通道进入管线演示）</h2>
     <div class="triple">
-      <div class="chan sP"><div class="name">压力凝胶通道</div><div class="info">门控段 512 样本</div><canvas id="wP"></canvas></div>
-      <div class="chan sT"><div class="name">温度凝胶通道</div><div class="info">fs = 60 MS/s</div><canvas id="wT"></canvas></div>
-      <div class="chan sPh"><div class="name">pH 凝胶通道</div><div class="info">载频 ≈ 9 MHz</div><canvas id="wPh"></canvas></div>
+      <div class="chan sP sel" id="chP"><div class="name">压力凝胶通道</div><div class="info">峰频≈9 MHz</div>
+        <canvas class="wave" id="wP"></canvas><canvas class="fall" id="fP"></canvas><div class="stale" id="zP">参数已变 · 数据过期</div></div>
+      <div class="chan sT" id="chT"><div class="name">温度凝胶通道</div><div class="info">fs = 60 MS/s</div>
+        <canvas class="wave" id="wT"></canvas><canvas class="fall" id="fT"></canvas><div class="stale" id="zT">参数已变 · 数据过期</div></div>
+      <div class="chan sPh" id="chPh"><div class="name">pH 凝胶通道</div><div class="info">瀑布 = 短时谱</div>
+        <canvas class="wave" id="wPh"></canvas><canvas class="fall" id="fPh"></canvas><div class="stale" id="zPh">参数已变 · 数据过期</div></div>
     </div>
 
-    <h2>② 解调管线（点击运算，从 r(t) 现场拆谱）</h2>
+    <h2>② 解调管线（每一步都是真实中间量动画）</h2>
     <div class="pipe">
       <div class="step" id="st1"><span class="no">1</span>门控截取</div>
       <div class="step" id="st2"><span class="no">2</span>10 帧叠加</div>
@@ -142,16 +150,17 @@
       <div class="step" id="st4"><span class="no">4</span>包络平滑</div>
       <div class="step" id="st5"><span class="no">5</span>峰位追踪</div>
     </div>
+    <div class="stagebar"><canvas id="pipeStage"></canvas></div>
     <div class="runrow">
-      <button id="bRun" class="primary">▶ 运算 · 解调三通道</button>
+      <button id="bRun" class="primary">▶ 运算 · 解调选中通道（三通道反演同步完成）</button>
       <span id="runNote" style="font-size:12px;color:var(--ink2)">参数变化后需重新运算</span>
     </div>
 
-    <h2>③ 解调谱 |R(f)|（由信号算出，非预画）</h2>
+    <h2>③ 解调谱 |R(f)|（由信号算出）</h2>
     <div class="triple">
-      <div class="chan sP"><div class="name">压力通道谱</div><div class="info" id="iP">—</div><canvas id="cP"></canvas><div class="stale" id="zP">参数已变 · 数据过期</div></div>
-      <div class="chan sT"><div class="name">温度通道谱</div><div class="info" id="iT">—</div><canvas id="cT"></canvas><div class="stale" id="zT">参数已变 · 数据过期</div></div>
-      <div class="chan sPh"><div class="name">pH 通道谱</div><div class="info" id="iPh">—</div><canvas id="cPh"></canvas><div class="stale" id="zPh">参数已变 · 数据过期</div></div>
+      <div class="chan sP spec"><div class="name">压力通道谱</div><div class="info" id="iP">—</div><canvas id="cP"></canvas><div class="stale" id="zp">过期</div></div>
+      <div class="chan sT spec"><div class="name">温度通道谱</div><div class="info" id="iT">—</div><canvas id="cT"></canvas><div class="stale" id="zt">过期</div></div>
+      <div class="chan sPh spec"><div class="name">pH 通道谱</div><div class="info" id="iPh">—</div><canvas id="cPh"></canvas><div class="stale" id="zph">过期</div></div>
     </div>
 
     <h2>④ 反演 · 三路峰移 → 参数估计（vs 真值）</h2>
@@ -167,10 +176,9 @@
     </div>
     <div class="footnote">
       <b>合成物理（窄带回波模型）</b>：带隙反射峰窄，回波近似为以峰频振荡的射频段——参数改变峰频即改变载频；
-      帧间相位确定、噪声随机，10 帧叠加平均只压噪声（√10）。解调管线忠于论文开源代码（MATLAB 复现）：
-      门控 → 10 帧叠加 → 零填充 FFT（16384 点）→ 滑动峰值包络 → 窗内峰位 + 抛物线插值；
-      反演前先以无噪基线解调做<b>仪器校零</b>（吸收包络/窗口系统偏置，对应论文一切频移相对基线测量），
-      再解 3×3 线性方程组。<b>把噪声调大再运算</b>，观察反演误差恶化——这就是信噪比的代价。
+      帧间相位确定、噪声随机，10 帧叠加平均只压噪声（√10）。瀑布图 = 滑动短时谱（示波器 FFT 模式的标准视图）：
+      <b>动一个参数，亮纹立刻横移</b>。解调管线忠于论文开源代码（MATLAB 复现）；反演前先以无噪基线解调做<b>仪器校零</b>，
+      再解 3×3 线性方程组。<b>把噪声调大再运算</b>，观察反演误差恶化——信噪比的代价。
     </div>
   </section>
 </div>
@@ -206,53 +214,70 @@ for(const key of Object.keys(GELS)){
     lo = Math.min(lo, d); hi = Math.max(hi, d);
   }
   const margin = (hi-lo)*0.20 + 0.02;
-  g.wLo = g.f0 * (1 + lo - margin); g.wHi = g.f0 * (1 + hi + margin);   // 相对频移×f₀ → 绝对频率
+  g.wLo = g.f0 * (1 + lo - margin); g.wHi = g.f0 * (1 + hi + margin);
 }
 function deltaF(g, s = state){
   return g.f0 * ( g.kP*(s.P-BASE.P) + g.kT*(s.T-BASE.T) + g.kPh*(s.Ph-BASE.Ph) );
 }
 let gaussian = (m=0,s=1)=>{ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random();
   return m + s*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
-
-/* ============ 信号合成与解调管线 ============ */
-const FS = 60e6;               // 采样率
-const NSIG = 512;              // 门控段样本（显示 + 运算输入）
-const NFFT = 16384;            // 零填充 FFT 点数
-const noiseAmp = ()=> parseFloat($('sigma').value)/10;   // 0..1
-
-// 确定性相位（同一凝胶同一谱线的相位固定——真实反射系数谱是确定的，帧平均才能保信号压噪声）
 function phaseOf(k, seed){
   let h = (Math.imul(k, 2654435761) + Math.imul(seed, 40503)) >>> 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
   return ((h ^ (h >>> 16)) / 4294967296) * 2 * Math.PI;
 }
-const GEL_SEED = { P: 11, T: 23, Ph: 37 };
-void GEL_SEED;
+const noiseAmp = ()=> parseFloat($('sigma').value)/10;
 
-// 生成一帧门控回波：窄带回波模型——带隙反射峰窄，回波近似以峰频振荡的射频段（软边缘包络）
-function synthFrame(g, s = state, noise = true){
+/* ============ 信号 ============ */
+const FS = 60e6, NSIG = 512, NFFT = 16384;
+const GATE0 = 700;                       // 完整 A-scan 中凝胶段的起始样本（门控动画用）
+const FULLN = GATE0 + NSIG + 700;
+
+function echoSig(g, s = state){          // 凝胶段 512 点（窄带回波）
   const fpk = g.f0 + deltaF(g, s);
-  const ph0 = phaseOf(1, g.seed);                       // 每凝胶固定初始相位（帧间确定）
+  const ph0 = phaseOf(1, g.seed);
   const out = new Float64Array(NSIG);
   for(let i=0;i<NSIG;i++){
-    const t = i/FS;
-    const w = Math.sin(Math.PI*(i+0.5)/NSIG);           // 半余弦包络
-    out[i] = w*Math.cos(2*Math.PI*fpk*t + ph0) + (noise? gaussian(0, noiseAmp()*0.15) : 0);
+    const w = Math.sin(Math.PI*(i+0.5)/NSIG);
+    out[i] = w*Math.cos(2*Math.PI*fpk*(i/FS) + ph0);
   }
   return out;
 }
+function synthFrame(g, s = state, noise = true){   // 一帧门控回波（含噪）
+  const pure = echoSig(g, s);
+  if(!noise) return pure;
+  const out = new Float64Array(NSIG);
+  for(let i=0;i<NSIG;i++) out[i] = pure[i] + gaussian(0, noiseAmp()*0.15);
+  return out;
+}
+function fullScan(g, s = state, noise = true){     // 完整深度扫描（组织杂波 + 凝胶段）
+  const out = new Float64Array(FULLN);
+  if(noise) for(let i=0;i<FULLN;i++) out[i] = gaussian(0, noiseAmp()*0.10);
+  const clutters = [[90,1.6],[260,-1.1],[430,0.9],[FULLN-300,1.2],[FULLN-120,-0.8]];  // 固定组织界面
+  for(const [c,a] of clutters){
+    for(let d=-40;d<=40;d++){ const i=c+d; if(i>=0&&i<FULLN)
+      out[i] += a*Math.exp(-d*d/320)*Math.cos(2*Math.PI*GELS.P.f0*(i/FS)); }
+  }
+  const e = echoSig(g, s);
+  for(let i=0;i<NSIG;i++) out[GATE0+i] += e[i];
+  return out;
+}
+function acquire(g){                     // 10 帧叠加平均
+  const F = 10, acc = new Float64Array(NSIG);
+  for(let f=0;f<F;f++){ const fr = synthFrame(g, state, true); for(let i=0;i<NSIG;i++) acc[i]+=fr[i]; }
+  for(let i=0;i<NSIG;i++) acc[i]/=F;
+  return acc;
+}
+
+/* ============ FFT 与解调 ============ */
 function fftInPlace(re, im){
   const n = re.length;
-  for(let i=1,j=0;i<n;i++){                   // 位反转
-    let bit = n>>1;
-    for(; j & bit; bit >>=1) j ^= bit;
-    j |= bit;
-    if(i<j){ [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; }
-  }
-  for(let len=2; len<=n; len<<=1){
-    const ang = -2*Math.PI/len, wr = Math.cos(ang), wi = Math.sin(ang);
+  for(let i=1,j=0;i<n;i++){ let bit=n>>1; for(;j&bit;bit>>=1)j^=bit; j|=bit;
+    if(i<j){ [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; } }
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
     for(let i=0;i<n;i+=len){
-      let cwr=1, cwi=0;
+      let cwr=1,cwi=0;
       for(let k=0;k<len/2;k++){
         const ur=re[i+k], ui=im[i+k];
         const vr=re[i+k+len/2]*cwr - im[i+k+len/2]*cwi;
@@ -260,51 +285,45 @@ function fftInPlace(re, im){
         re[i+k]=ur+vr; im[i+k]=ui+vi;
         re[i+k+len/2]=ur-vr; im[i+k+len/2]=ui-vi;
         const t=cwr*wr-cwi*wi; cwi=cwr*wi+cwi*wr; cwr=t;
-      }
-    }
-  }
+      }}}
 }
-// 完整合成：10 帧平均（管线第 2 步），返回平均后时域
-function acquire(g){
-  const frames = 10;
-  const acc = new Float64Array(NSIG);
-  for(let f=0; f<frames; f++){
-    const fr = synthFrame(g, state, true);
-    for(let i=0;i<NSIG;i++) acc[i]+=fr[i];
-  }
-  for(let i=0;i<NSIG;i++) acc[i]/=frames;
-  return acc;
-}
-// 解调：零填充 FFT → 幅度 → 包络 → 峰位（抛物线插值）
-function demodulate(g, sig){
+function spectrum(g, sig){               // 零填充 FFT → 窗口内幅度谱
   const re = new Float64Array(NFFT), im = new Float64Array(NFFT);
-  for(let i=0;i<NSIG;i++) re[i] = sig[i];                     // 零填充
+  for(let i=0;i<sig.length;i++) re[i] = sig[i];
   fftInPlace(re, im);
   const df = FS/NFFT;
   const k0 = Math.round(g.wLo/df), k1 = Math.round(g.wHi/df);
-  const n = k1-k0+1;
-  const amp = new Float64Array(n);
+  const n = k1-k0+1, amp = new Float64Array(n);
   for(let k=0;k<n;k++){ const j=k0+k; amp[k] = Math.hypot(re[j], im[j]); }
-  // 滑动峰值包络（论文 envelope 'peak' 的等效简化）
-  const W = Math.max(3, Math.round(n*0.02));
+  return { freqs: Array.from({length:n},(_,i)=>(k0+i)*df), amp, df };
+}
+function envelope(amp){                  // 滑动峰值包络
+  const n = amp.length, W = Math.max(3, Math.round(n*0.02));
   const env = new Float64Array(n);
   for(let k=0;k<n;k++){ let m=0; for(let w=-W;w<=W;w++){ const j=k+w; if(j>=0&&j<n) m=Math.max(m,amp[j]); } env[k]=m; }
-  // 峰位 + 三点抛物线插值
-  let pk=0; for(let k=1;k<n;k++) if(env[k]>env[pk]) pk=k;
-  const y0=env[Math.max(0,pk-1)], y1=env[pk], y2=env[Math.min(n-1,pk+1)];
-  const denom = (y0-2*y1+y2);
-  const shift = denom? 0.5*(y0-y2)/denom : 0;
-  const fPeak = (k0+pk+shift)*df;
-  return { freqs: Array.from({length:n},(_,i)=>(k0+i)*df), amp, env, fPeak };
+  return env;
 }
-// 基线标定（仪器校零）：无噪基线解调，吸收包络/窗口引入的系统偏置——对应论文中一切频移相对基线测量
+function trackPeak(env, k0, df){         // 峰位 + 抛物线插值
+  let pk=0; for(let k=1;k<env.length;k++) if(env[k]>env[pk]) pk=k;
+  const y0=env[Math.max(0,pk-1)], y1=env[pk], y2=env[Math.min(env.length-1,pk+1)];
+  const den = y0-2*y1+y2;
+  const shift = den? 0.5*(y0-y2)/den : 0;
+  return (k0+pk+shift)*df;
+}
+function demodulate(g, sig){
+  const s = spectrum(g, sig);
+  const env = envelope(s.amp);
+  const df = s.df, k0 = Math.round(g.wLo/df);
+  return { ...s, env, fPeak: trackPeak(env, k0, df) };
+}
+// 仪器校零：无噪基线解调
 for(const k of Object.keys(GELS)) GELS[k].fCal = demodulate(GELS[k], synthFrame(GELS[k], BASE, false)).fPeak;
 
-/* ============ 绘制 ============ */
+/* ============ 绘制工具 ============ */
 function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 function setupCanvas(cv){
-  const dpr = Math.min(devicePixelRatio,2), W = cv.clientWidth, H = cv.clientHeight;
-  if(cv.width !== W*dpr){ cv.width = W*dpr; cv.height = H*dpr; }
+  const dpr = Math.min(devicePixelRatio,2), W = cv.clientWidth||150, H = cv.clientHeight||60;
+  if(cv.width !== W*dpr || cv.height !== H*dpr){ cv.width = W*dpr; cv.height = H*dpr; }
   const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
   return {ctx,W,H};
 }
@@ -313,8 +332,7 @@ function drawWave(id, sig){
   ctx.clearRect(0,0,W,H);
   ctx.strokeStyle = getCSS('--line');
   ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
-  let mx=0; for(const v of sig) mx=Math.max(mx,Math.abs(v));
-  if(!mx) mx=1;
+  let mx=1e-9; for(const v of sig) mx=Math.max(mx,Math.abs(v));
   ctx.strokeStyle = getCSS('--accent'); ctx.lineWidth = 1; ctx.beginPath();
   for(let i=0;i<sig.length;i++){
     const x=i/(sig.length-1)*W, y=H/2 - sig[i]/(mx*1.15)*H/2;
@@ -322,7 +340,7 @@ function drawWave(id, sig){
   }
   ctx.stroke();
 }
-function drawSpec(id, g, d){
+function drawSpec(id, g, d, fCal){
   const {ctx,W,H} = setupCanvas($(id));
   ctx.clearRect(0,0,W,H);
   const lo=g.wLo, hi=g.wHi, X=f=>(f-lo)/(hi-lo)*W;
@@ -330,21 +348,253 @@ function drawSpec(id, g, d){
   ctx.strokeStyle=getCSS('--line');
   for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(W*i/4,0); ctx.lineTo(W*i/4,H); ctx.stroke(); }
   ctx.setLineDash([4,4]); ctx.strokeStyle=getCSS('--ink2');
-  ctx.beginPath(); ctx.moveTo(X(g.f0),0); ctx.lineTo(X(g.f0),H); ctx.stroke(); ctx.setLineDash([]);
-  const Y=v=>H-4-v/mx*(H-14);
-  ctx.strokeStyle=getCSS('--ink2'); ctx.globalAlpha=.5; ctx.beginPath();     // 原始幅度谱
+  ctx.beginPath(); ctx.moveTo(X(g.fCal),0); ctx.lineTo(X(g.fCal),H); ctx.stroke(); ctx.setLineDash([]);
+  const Y=v=>H-3-v/mx*(H-10);
+  ctx.strokeStyle=getCSS('--ink2'); ctx.globalAlpha=.45; ctx.beginPath();
   d.amp.forEach((v,i)=>{ const x=X(d.freqs[i]),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke(); ctx.globalAlpha=1;
-  ctx.strokeStyle=getCSS('--accent'); ctx.lineWidth=1.6; ctx.beginPath();    // 包络
+  ctx.strokeStyle=getCSS('--accent'); ctx.lineWidth=1.5; ctx.beginPath();
   d.env.forEach((v,i)=>{ const x=X(d.freqs[i]),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke();
-  ctx.strokeStyle=getCSS('--rose'); ctx.lineWidth=1.4;                       // 峰位
+  ctx.strokeStyle=getCSS('--rose'); ctx.lineWidth=1.4;
   ctx.beginPath(); ctx.moveTo(X(d.fPeak),0); ctx.lineTo(X(d.fPeak),H); ctx.stroke();
-  ctx.fillStyle=getCSS('--ink2'); ctx.font='10px system-ui';
-  ctx.fillText((lo/1e6).toFixed(2),2,H-2); ctx.fillText((hi/1e6).toFixed(2)+' MHz',W-62,H-2);
+  ctx.fillStyle=getCSS('--ink2'); ctx.font='9px system-ui';
+  ctx.fillText((lo/1e6).toFixed(2),2,H-2); ctx.fillText((hi/1e6).toFixed(2)+'M',W-34,H-2);
 }
 
-/* ============ 3D（沿用） ============ */
+/* ============ 瀑布图 ============ */
+const NBIN = 160;
+const fallBuf = {};                      // 离屏历史画布
+function pushFall(id, g, sig){
+  const disp = setupCanvas($(id));
+  if(!fallBuf[id] || fallBuf[id].width!==NBIN){
+    const c = document.createElement('canvas'); c.width=NBIN; c.height=256;
+    fallBuf[id] = c;
+  }
+  const buf = fallBuf[id], bctx = buf.getContext('2d');
+  bctx.drawImage(buf, 0, 1);                                   // 下移一行
+  // 新行：短时谱（512 点 FFT 取窗口段 → NBIN 列）
+  const re = new Float64Array(1024), im = new Float64Array(1024);
+  for(let i=0;i<NSIG && i<1024;i++) re[i]=sig[i];
+  fftInPlace(re, im);
+  const df = FS/1024;
+  const row = bctx.createImageData(NBIN,1);
+  let mx=1e-9;
+  const cols = new Float64Array(NBIN);
+  for(let b=0;b<NBIN;b++){
+    const f = g.wLo + (g.wHi-g.wLo)*(b+0.5)/NBIN;
+    const k = Math.round(f/df);
+    const a = Math.hypot(re[k]||0, im[k]||0);
+    cols[b]=a; mx=Math.max(mx,a);
+  }
+  for(let b=0;b<NBIN;b++){
+    const v = Math.pow(cols[b]/mx, 0.6);                       // 伽马提亮
+    const [r,gg,bb] = heat(v);
+    const p=b*4; row.data[p]=r; row.data[p+1]=gg; row.data[p+2]=bb; row.data[p+3]=255;
+  }
+  bctx.putImageData(row, 0, 0);
+  // 显示层：拉伸 + 基准线
+  const {ctx,W,H} = disp;
+  ctx.imageSmoothingEnabled = true;
+  ctx.clearRect(0,0,W,H);
+  ctx.drawImage(buf, 0,0,NBIN,256, 0,0,W,H);
+  const x0 = (g.fCal-g.wLo)/(g.wHi-g.wLo)*W;
+  ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(x0,0); ctx.lineTo(x0,H); ctx.stroke(); ctx.setLineDash([]);
+}
+function heat(v){                        // 黑→蓝→青→黄 热图
+  v = Math.max(0, Math.min(1, v));
+  const r = v<0.5? 0 : Math.round(510*(v-0.5));
+  const g = v<0.25? 0 : v<0.75? Math.round(510*(v-0.25)) : 255;
+  const b = v<0.25? Math.round(1020*v) : v<0.5? 255 : Math.round(510*(1-v));
+  return [r,g,b];
+}
+
+/* ============ 管线舞台动画 ============ */
+let selected = 'P';
+function stageCtx(){ return setupCanvas($('pipeStage')); }
+function drawGating(g, prog){            // 步骤1：A-scan + 门控窗滑入
+  const {ctx,W,H} = stageCtx();
+  const scan = stageMem.scan;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=getCSS('--ink2'); ctx.font='11px system-ui';
+  ctx.fillText('A-scan 全深度回波（组织界面 + 凝胶段）', 8, 14);
+  let mx=1e-9; for(const v of scan) mx=Math.max(mx,Math.abs(v));
+  const gx0 = GATE0/FULLN, gw = NSIG/FULLN;
+  const winX = gx0*prog;                                     // 窗从左滑到凝胶段
+  ctx.fillStyle='rgba(62,198,181,.12)';
+  ctx.fillRect(winX*W, 20, gw*W, H-40);
+  ctx.strokeStyle = getCSS('--line'); ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+  ctx.strokeStyle=getCSS('--ink2'); ctx.globalAlpha=0.5; ctx.beginPath();
+  for(let i=0;i<FULLN;i+=2){ const x=i/FULLN*W, y=H/2-scan[i]/(mx*1.2)*(H-44)/2; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.stroke(); ctx.globalAlpha=1;
+  // 门控段放大高亮
+  ctx.strokeStyle=getCSS('--accent'); ctx.lineWidth=1.4; ctx.beginPath();
+  for(let i=0;i<NSIG;i+=2){ const x=(winX+gw*i/NSIG)*W, y=H/2-scan[GATE0+i]/(mx*1.2)*(H-44)/2; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.stroke();
+  if(prog>0.99){ ctx.fillStyle=getCSS('--accent'); ctx.fillText('✓ 门控：只保留凝胶深度段 512 样本', 8, H-8); }
+}
+function drawAverage(prog, idx){         // 步骤2：10 帧叠影 → 平均线浮现
+  const {ctx,W,H} = stageCtx();
+  const frames = stageMem.frames, avg = stageMem.avg;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=getCSS('--ink2'); ctx.font='11px system-ui';
+  ctx.fillText('10 帧独立采集（含噪）叠加 → 平均（噪声 ↓√10）', 8, 14);
+  let mx=1e-9; for(const v of frames[0]) mx=Math.max(mx,Math.abs(v));
+  for(const v of avg) mx=Math.max(mx,Math.abs(v));
+  const showFrames = Math.min(10, Math.floor(idx/60)+1);
+  for(let f=0; f<showFrames; f++){
+    ctx.strokeStyle=getCSS('--ink2'); ctx.globalAlpha=0.18;
+    ctx.beginPath();
+    for(let i=0;i<NSIG;i+=2){ const x=i/NSIG*W, y=H/2-frames[f][i]/(mx*1.2)*(H-40)/2; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    ctx.stroke();
+  }
+  ctx.globalAlpha=Math.min(1, prog*1.4);
+  ctx.strokeStyle=getCSS('--accent'); ctx.lineWidth=1.6; ctx.beginPath();
+  for(let i=0;i<NSIG;i+=2){ const x=i/NSIG*W, y=H/2-avg[i]/(mx*1.2)*(H-40)/2; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.stroke(); ctx.globalAlpha=1;
+}
+function drawFFT(g, prog){               // 步骤3：谱淡入
+  const {ctx,W,H} = stageCtx();
+  const s = stageMem.spec;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=getCSS('--ink2'); ctx.font='11px system-ui';
+  ctx.fillText('零填充 FFT（512 → 16384 点）：时域 → 频域', 8, 14);
+  const lo=g.wLo, hi=g.wHi, X=f=>(f-lo)/(hi-lo)*(W-16)+8;
+  let mx=0; for(const v of s.amp) mx=Math.max(mx,v);
+  const Y=v=>H-22-v/mx*(H-48);
+  ctx.globalAlpha=prog;
+  ctx.strokeStyle=getCSS('--accent'); ctx.beginPath();
+  s.amp.forEach((v,i)=>{ const x=X(s.freqs[i]),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke(); ctx.globalAlpha=1;
+  ctx.fillStyle=getCSS('--ink2');
+  ctx.fillText((lo/1e6).toFixed(2)+' MHz', 8, H-8);
+  ctx.fillText((hi/1e6).toFixed(2)+' MHz', W-70, H-8);
+}
+function drawEnv(g, prog){               // 步骤4：包络描画
+  const {ctx,W,H} = stageCtx();
+  const s = stageMem.spec;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=getCSS('--ink2'); ctx.font='11px system-ui';
+  ctx.fillText('滑动峰值包络：抑制谱毛刺', 8, 14);
+  const lo=g.wLo, hi=g.wHi, X=f=>(f-lo)/(hi-lo)*(W-16)+8;
+  let mx=0; for(const v of s.amp) mx=Math.max(mx,v);
+  const Y=v=>H-22-v/mx*(H-48);
+  ctx.strokeStyle=getCSS('--ink2'); ctx.globalAlpha=.4; ctx.beginPath();
+  s.amp.forEach((v,i)=>{ const x=X(s.freqs[i]),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke(); ctx.globalAlpha=1;
+  const n = Math.floor(s.env.length*prog);
+  ctx.strokeStyle=getCSS('--gold'); ctx.lineWidth=2; ctx.beginPath();
+  for(let i=0;i<n;i++){ const x=X(s.freqs[i]),y=Y(s.env[i]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.stroke();
+}
+function drawTrack(g, prog){             // 步骤5：峰位线落下
+  const {ctx,W,H} = stageCtx();
+  const s = stageMem.spec;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=getCSS('--ink2'); ctx.font='11px system-ui';
+  ctx.fillText('峰位追踪（窗内 argmax + 抛物线插值）', 8, 14);
+  const lo=g.wLo, hi=g.wHi, X=f=>(f-lo)/(hi-lo)*(W-16)+8;
+  let mx=0; for(const v of s.amp) mx=Math.max(mx,v);
+  const Y=v=>H-22-v/mx*(H-48);
+  ctx.strokeStyle=getCSS('--ink2'); ctx.globalAlpha=.4; ctx.beginPath();
+  s.amp.forEach((v,i)=>{ const x=X(s.freqs[i]),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke(); ctx.globalAlpha=1;
+  ctx.strokeStyle=getCSS('--gold'); ctx.lineWidth=2; ctx.beginPath();
+  s.env.forEach((v,i)=>{ const x=X(s.freqs[i]),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke();
+  const xp = X(s.fPeak), yTop = 20+ (1-prog)*(H-40);
+  ctx.strokeStyle=getCSS('--rose'); ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(xp, 20); ctx.lineTo(xp, yTop); ctx.stroke();
+  if(prog>0.95){
+    ctx.fillStyle=getCSS('--rose'); ctx.font='bold 12px system-ui';
+    ctx.fillText(`${(s.fPeak/1e6).toFixed(4)} MHz`, Math.min(xp+6, W-110), 34);
+    const dfz = (s.fPeak - g.fCal)/1e3;
+    ctx.fillText(`Δ校零 ${dfz.toFixed(1)} kHz`, Math.min(xp+6, W-110), 50);
+  }
+}
+const stageMem = {};
+function animate(dur, fn){               // setTimeout 驱动的进度动画（兼容无头环境）
+  return new Promise(res=>{
+    const t0 = performance.now();
+    const step = ()=>{
+      const p = Math.min(1,(performance.now()-t0)/dur);
+      fn(p, performance.now()-t0);
+      p<1? setTimeout(step, 15) : res();
+    };
+    setTimeout(step, 15);
+  });
+}
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+/* ============ 运算序列 ============ */
+function solve3(K,y){
+  const M=K.map((r,i)=>[...r,y[i]]);
+  for(let c=0;c<3;c++){
+    let p=c; for(let r=c+1;r<3;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+    [M[c],M[p]]=[M[p],M[c]];
+    const d=M[c][c]; for(let j=c;j<4;j++)M[c][j]/=d;
+    for(let r=0;r<3;r++) if(r!==c){ const f=M[r][c]; for(let j=c;j<4;j++)M[r][j]-=f*M[c][j]; }
+  }
+  return [M[0][3],M[1][3],M[2][3]];
+}
+let running = false;
+$('bRun').addEventListener('click', async ()=>{
+  if(running) return;
+  running = true;
+  const btn = $('bRun'); btn.disabled = true;
+  const steps = ['st1','st2','st3','st4','st5'].map($);
+  steps.forEach(s=>s.classList.remove('lit','done'));
+  $('runNote').textContent = '运算中…';
+  ['zP','zT','zPh','zp','zt','zph'].forEach(id=>$(id).classList.remove('on'));
+  const g = GELS[selected], key = selected;
+  // 真实中间量
+  stageMem.scan = fullScan(g, state, true);
+  stageMem.frames = Array.from({length:10}, ()=>synthFrame(g, state, true));
+  const acc = new Float64Array(NSIG);
+  for(const f of stageMem.frames) for(let i=0;i<NSIG;i++) acc[i]+=f[i];
+  for(let i=0;i<NSIG;i++) acc[i]/=10;
+  stageMem.avg = acc;
+  stageMem.spec = demodulate(g, acc);
+  // 三通道反演（静默）
+  const gelOrder = ['P','T','Ph'];
+  const res = {}; for(const k of gelOrder) res[k] = demodulate(GELS[k], acquire(GELS[k]));
+  // 动画序列
+  const seq = async ()=>{
+    steps[0].classList.add('lit'); await animate(900,(p)=>drawGating(g,p)); steps[0].classList.replace('lit','done'); await sleep(120);
+    steps[1].classList.add('lit'); await animate(800,(p,t)=>drawAverage(p,t)); steps[1].classList.replace('lit','done'); await sleep(120);
+    steps[2].classList.add('lit'); await animate(600,(p)=>drawFFT(g,p)); steps[2].classList.replace('lit','done'); await sleep(120);
+    steps[3].classList.add('lit'); await animate(700,(p)=>drawEnv(g,p)); steps[3].classList.replace('lit','done'); await sleep(120);
+    steps[4].classList.add('lit'); await animate(500,(p)=>drawTrack(g,p)); steps[4].classList.replace('lit','done'); await sleep(200);
+  };
+  await seq();
+  // 结果
+  drawSpec('cP',GELS.P,res.P); drawSpec('cT',GELS.T,res.T); drawSpec('cPh',GELS.Ph,res.Ph);
+  $('iP').textContent  = `峰 ${(res.P.fPeak/1e6).toFixed(4)}M · Δ校零 ${((res.P.fPeak-GELS.P.fCal)/1e3).toFixed(1)}k`;
+  $('iT').textContent  = `峰 ${(res.T.fPeak/1e6).toFixed(4)}M · Δ校零 ${((res.T.fPeak-GELS.T.fCal)/1e3).toFixed(1)}k`;
+  $('iPh').textContent = `峰 ${(res.Ph.fPeak/1e6).toFixed(4)}M · Δ校零 ${((res.Ph.fPeak-GELS.Ph.fCal)/1e3).toFixed(1)}k`;
+  const K = [ [GELS.P.kP,GELS.P.kT,GELS.P.kPh],[GELS.T.kP,GELS.T.kT,GELS.T.kPh],[GELS.Ph.kP,GELS.Ph.kT,GELS.Ph.kPh] ];
+  const y = gelOrder.map(k=> (res[k].fPeak - GELS[k].fCal)/GELS[k].f0);
+  const x = solve3(K,y);
+  const est = { P:x[0]+BASE.P, T:x[1]+BASE.T, Ph:x[2]+BASE.Ph };
+  put('tP',state.P.toFixed(1)); put('eP',est.P.toFixed(1)); put('rP',(est.P-state.P).toFixed(2));
+  put('tT',state.T.toFixed(1)); put('eT',est.T.toFixed(1)); put('rT',(est.T-state.T).toFixed(2));
+  put('tPh',state.Ph.toFixed(2)); put('ePh',est.Ph.toFixed(2)); put('rPh',(est.Ph-state.Ph).toFixed(3));
+  $('runNote').textContent = '完成 · 参数变化后请重新运算';
+  btn.disabled = false; running = false;
+});
+function put(id,v){ $(id).textContent=v; }
+
+/* ============ 通道选择 ============ */
+for(const id of ['chP','chT','chPh']){
+  $(id).addEventListener('click', ()=>{
+    selected = id.slice(2);
+    ['chP','chT','chPh'].forEach(x=>$(x).classList.remove('sel'));
+    $(id).classList.add('sel');
+  });
+}
+
+/* ============ 3D ============ */
 const canvas = $('stage');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -382,75 +632,32 @@ function targetScale(s){
   return { x:cA/Math.sqrt(cP), y:cA/Math.sqrt(cP), z:cP*cA };
 }
 
-/* ============ 主循环：参数→3D+原始信号 ============ */
+/* ============ 主循环 ============ */
 let waveTimer = 0;
+const fallMap = { P:['wP','fP'], T:['wT','fT'], Ph:['wPh','fPh'] };
 function tick(t){
   for(const k of ['P','T','Ph']) disp[k] += (state[k]-disp[k])*.12;
   const s = targetScale(disp);
   layoutCols(s.x,s.y,s.z);
   controls.update(); renderer.render(scene,camera);
-  if(t - waveTimer > 400){                    // 原始信号 ~2.5 Hz 刷新（模拟连续采集）
+  if(t - waveTimer > 180){                    // 波形+瀑布 ~5.5 Hz 刷新
     waveTimer = t;
-    drawWave('wP', synthFrame(GELS.P));
-    drawWave('wT', synthFrame(GELS.T));
-    drawWave('wPh',synthFrame(GELS.Ph));
+    for(const k of ['P','T','Ph']){
+      const [wid,fid] = fallMap[k];
+      const fr = synthFrame(GELS[k], disp, true);
+      drawWave(wid, fr);
+      pushFall(fid, GELS[k], fr);
+    }
   }
   requestAnimationFrame(tick);
 }
-
-/* ============ 运算：分步点亮管线 ============ */
-function solve3(K,y){
-  const M=K.map((r,i)=>[...r,y[i]]);
-  for(let c=0;c<3;c++){
-    let p=c; for(let r=c+1;r<3;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
-    [M[c],M[p]]=[M[p],M[c]];
-    const d=M[c][c]; for(let j=c;j<4;j++)M[c][j]/=d;
-    for(let r=0;r<3;r++) if(r!==c){ const f=M[r][c]; for(let j=c;j<4;j++)M[r][j]-=f*M[c][j]; }
-  }
-  return [M[0][3],M[1][3],M[2][3]];
-}
-$('bRun').addEventListener('click', ()=>{
-  const btn = $('bRun'); btn.disabled = true;
-  const steps = ['st1','st2','st3','st4','st5'].map($);
-  steps.forEach(s=>s.classList.remove('lit','done'));
-  $('runNote').textContent = '运算中…';
-  ['zP','zT','zPh'].forEach(id=>$(id).classList.remove('on'));
-  const gelOrder = ['P','T','Ph'];
-  const stepMs = 480;
-  steps.forEach((s,i)=> setTimeout(()=>{
-    s.classList.add('lit');
-    if(i===2){                                  // 零填充 FFT 步：正式采集+解调
-      const res = {};
-      for(const k of gelOrder) res[k] = demodulate(GELS[k], acquire(GELS[k]));
-      window._lastRes = res;
-    }
-  }, i*stepMs));
-  setTimeout(()=>{
-    steps.forEach(s=>{ s.classList.remove('lit'); s.classList.add('done'); });
-    const res = window._lastRes;
-    const K = [ [GELS.P.kP,GELS.P.kT,GELS.P.kPh],[GELS.T.kP,GELS.T.kT,GELS.T.kPh],[GELS.Ph.kP,GELS.Ph.kT,GELS.Ph.kPh] ];
-    const y = gelOrder.map((k,i)=> (res[k].fPeak - GELS[k].fCal)/GELS[k].f0);   // 基线校零后的频移
-    const x = solve3(K,y);
-    drawSpec('cP',GELS.P,res.P);   drawSpec('cT',GELS.T,res.T);   drawSpec('cPh',GELS.Ph,res.Ph);
-    $('iP').textContent  = `峰 ${(res.P.fPeak/1e6).toFixed(4)} MHz · Δ校零 ${((res.P.fPeak-GELS.P.fCal)/1e3).toFixed(1)} kHz`;
-    $('iT').textContent  = `峰 ${(res.T.fPeak/1e6).toFixed(4)} MHz · Δ校零 ${((res.T.fPeak-GELS.T.fCal)/1e3).toFixed(1)} kHz`;
-    $('iPh').textContent = `峰 ${(res.Ph.fPeak/1e6).toFixed(4)} MHz · Δ校零 ${((res.Ph.fPeak-GELS.Ph.fCal)/1e3).toFixed(1)} kHz`;
-    const est = { P:x[0]+BASE.P, T:x[1]+BASE.T, Ph:x[2]+BASE.Ph };
-    put('tP',state.P.toFixed(1)); put('eP',est.P.toFixed(1)); put('rP',(est.P-state.P).toFixed(2));
-    put('tT',state.T.toFixed(1)); put('eT',est.T.toFixed(1)); put('rT',(est.T-state.T).toFixed(2));
-    put('tPh',state.Ph.toFixed(2)); put('ePh',est.Ph.toFixed(2)); put('rPh',(est.Ph-state.Ph).toFixed(3));
-    $('runNote').textContent = '完成 · 参数变化后请重新运算';
-    btn.disabled = false;
-  }, steps.length*stepMs + 200);
-});
-function put(id,v){ $(id).textContent=v; }
 
 /* ============ 事件 ============ */
 function bind(sid,vid,key,unit,d){
   $(sid).addEventListener('input', e=>{
     state[key] = parseFloat(e.target.value);
     $(vid).textContent = state[key].toFixed(d)+unit;
-    ['zP','zT','zPh'].forEach(id=>$(id).classList.add('on'));   // 谱过期
+    ['zP','zT','zPh','zp','zt','zph'].forEach(id=>$(id).classList.add('on'));
   });
 }
 bind('sP','vP','P',' mmHg',1);
@@ -460,7 +667,6 @@ $('sigma').addEventListener('input', e=>{
   const v = parseFloat(e.target.value);
   $('vSig').textContent = v<2? '极低': v<5? '低': v<7? '中': v<9? '高': '极高';
 });
-$('sigma').dispatchEvent(new Event('input'));
 function animTo(s){
   const t0=performance.now(), from={...state};
   const step=t=>{ const k=Math.min(1,(t-t0)/900), e=1-Math.pow(1-k,3);
@@ -468,7 +674,7 @@ function animTo(s){
     $('sP').value=state.P; $('vP').textContent=state.P.toFixed(1)+' mmHg';
     $('sT').value=state.T; $('vT').textContent=state.T.toFixed(1)+' °C';
     $('sPh').value=state.Ph; $('vPh').textContent=state.Ph.toFixed(2);
-    ['zP','zT','zPh'].forEach(id=>$(id).classList.add('on'));
+    ['zP','zT','zPh','zp','zt','zph'].forEach(id=>$(id).classList.add('on'));
     if(k<1) requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
@@ -477,17 +683,17 @@ $('bT').onclick  = ()=>animTo({P:10,T:41.5,Ph:7.4});
 $('bPh').onclick = ()=>animTo({P:10,T:37,Ph:4.0});
 $('bMix').onclick= ()=>animTo({P:38,T:40.5,Ph:5.5});
 $('bReset').onclick = ()=>animTo({P:10,T:37,Ph:7.4});
-// URL 预设同步
 $('sP').value=state.P;  $('vP').textContent=state.P.toFixed(1)+' mmHg';
 $('sT').value=state.T;  $('vT').textContent=state.T.toFixed(1)+' °C';
 $('sPh').value=state.Ph; $('vPh').textContent=state.Ph.toFixed(2);
+$('sigma').dispatchEvent(new Event('input'));
 function resize(){
   const w=canvas.clientWidth, h=canvas.clientHeight;
   renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(canvas); resize();
 requestAnimationFrame(tick);
-setTimeout(()=>$('bRun').click(), 900);   // 加载后自动演示一次完整测量闭环
+setTimeout(()=>$('bRun').click(), 900);
 </script>
 </body>
 </html>

@@ -163,7 +163,23 @@ const GELS = {
 };
 const BASE = { P: 0, T: 28, Ph: 8.0 };
 const state = { P: 10, T: 37, Ph: 7.4 };
-const disp  = { P: 10, T: 37, Ph: 7.4 };   // 平滑显示值
+// URL 参数预设（?P=70&T=43&Ph=2）
+const urlp = new URLSearchParams(location.search);
+for(const k of ['P','T','Ph']){ const v = parseFloat(urlp.get(k)); if(!isNaN(v)) state[k] = v; }
+const disp  = { ...state };   // 平滑显示值
+
+// 每凝胶频谱窗口：滑块全量程响应包络 + 边距（保证峰全程可见）
+for(const key of Object.keys(GELS)){
+  const g = GELS[key];
+  let lo = Infinity, hi = -Infinity;
+  for(const P of [0,70]) for(const T of [28,43]) for(const Ph of [2,8]){
+    const d = g.kP*(P-BASE.P) + g.kT*(T-BASE.T) + g.kPh*(Ph-BASE.Ph);
+    lo = Math.min(lo, d); hi = Math.max(hi, d);
+  }
+  const margin = (hi-lo)*0.18 + 0.02;           // 相对频移量纲的边距
+  g.wLo = g.f0 + (lo - margin);                  // Hz
+  g.wHi = g.f0 + (hi + margin);
+}
 
 function deltaF(g, s = state){
   return g.f0 * ( g.kP*(s.P-BASE.P) + g.kT*(s.T-BASE.T) + g.kPh*(s.Ph-BASE.Ph) );
@@ -225,19 +241,19 @@ function drawSpec(id, gel, noiseHz){
   if(cv.width !== W*dpr){ cv.width = W*dpr; cv.height = H*dpr; }
   ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
   const f0 = gel.f0/1e6, df = (deltaF(gel)+noiseHz)/1e6;
-  const span = 0.55, lo = f0 - span, hi = f0 + span;   // MHz 窗口
-  const X = f => (f-lo)/(hi-lo)*W;
+  const lo = gel.wLo/1e6, hi = gel.wHi/1e6, span = hi - lo;
+  const X = f => (f-lo)/span*W;
   // 背景网格
   ctx.strokeStyle = getCSS('--line'); ctx.lineWidth = 1;
   for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(W*i/4,0); ctx.lineTo(W*i/4,H); ctx.stroke(); }
   // 基准虚线（f0）
   ctx.setLineDash([4,4]); ctx.strokeStyle = getCSS('--ink2');
   ctx.beginPath(); ctx.moveTo(X(f0),0); ctx.lineTo(X(f0),H); ctx.stroke(); ctx.setLineDash([]);
-  // 高斯峰
-  const sig = 0.045, fk = f0 + df;
+  // 高斯峰（宽度随窗口宽度缩放，保持视觉比例）
+  const sig = span*0.085, fk = f0 + df;
   ctx.beginPath();
   for(let px=0; px<=W; px++){
-    const f = lo + (hi-lo)*px/W;
+    const f = lo + span*px/W;
     const a = Math.exp(-((f-fk)**2)/(2*sig*sig));
     const y = H-6 - a*(H-16) + gaussian(0,0.006)*(H-16);
     px? ctx.lineTo(px,y) : ctx.moveTo(px,y);
@@ -247,7 +263,8 @@ function drawSpec(id, gel, noiseHz){
   ctx.strokeStyle = getCSS('--accent'); ctx.lineWidth = 1.6; ctx.stroke();
   // 刻度
   ctx.fillStyle = getCSS('--ink2'); ctx.font = '10px system-ui';
-  ctx.fillText((f0-0.5).toFixed(1), 2, H-2); ctx.fillText((f0+0.5).toFixed(1)+' MHz', W-58, H-2);
+  ctx.fillText(lo.toFixed(1), 2, H-2);
+  ctx.fillText(hi.toFixed(1)+' MHz', W-56, H-2);
 }
 function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 
@@ -334,6 +351,11 @@ $('bT').onclick  = ()=> animTo({P:10, T:41.5, Ph:7.4});
 $('bPh').onclick = ()=> animTo({P:10, T:37, Ph:4.0});
 $('bMix').onclick= ()=> animTo({P:38, T:40.5, Ph:5.5});
 $('bReset').onclick = ()=> animTo({P:10, T:37, Ph:7.4});
+
+// URL 预设初始同步滑块与读数
+$('sP').value=state.P;  $('vP').textContent=state.P.toFixed(1)+' mmHg';
+$('sT').value=state.T;  $('vT').textContent=state.T.toFixed(1)+' °C';
+$('sPh').value=state.Ph; $('vPh').textContent=state.Ph.toFixed(2);
 
 function resize(){
   const w = canvas.clientWidth, h = canvas.clientHeight;

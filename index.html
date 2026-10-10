@@ -50,6 +50,7 @@
   .chan .info{font-size:10.5px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-bottom:4px;min-height:13px}
   .chan .wave{width:100%;height:26px;display:block}
   .chan .fall{width:100%;height:92px;display:block;border-radius:6px}
+  .chan.spec{cursor:default}
   .sP .name{color:var(--p)} .sT .name{color:var(--t)} .sPh .name{color:var(--ph)}
   .stale{position:absolute;inset:0;border-radius:10px;background:color-mix(in srgb,var(--bg) 72%,transparent);
          display:flex;align-items:center;justify-content:center;font-size:11.5px;color:var(--gold);
@@ -135,11 +136,11 @@
     <h2>① 实时监视 · 示波器模式（波形 + 粗谱瀑布 ≈59 kHz/bin——只够看峰移动，不能定量）</h2>
     <div class="triple">
       <div class="chan sP sel" id="chP"><div class="name">压力凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
-        <canvas class="wave" id="wP"></canvas><canvas class="fall" id="fP"></canvas><div class="stale" id="zP">被测对象已变化 · 上次测量作废</div></div>
+        <canvas class="wave" id="wP"></canvas><canvas class="fall" id="fP"></canvas></div>
       <div class="chan sT" id="chT"><div class="name">温度凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
-        <canvas class="wave" id="wT"></canvas><canvas class="fall" id="fT"></canvas><div class="stale" id="zT">被测对象已变化 · 上次测量作废</div></div>
+        <canvas class="wave" id="wT"></canvas><canvas class="fall" id="fT"></canvas></div>
       <div class="chan sPh" id="chPh"><div class="name">pH 凝胶通道</div><div class="info">监视粗谱 · 白线=冻结测量点</div>
-        <canvas class="wave" id="wPh"></canvas><canvas class="fall" id="fPh"></canvas><div class="stale" id="zPh">被测对象已变化 · 上次测量作废</div></div>
+        <canvas class="wave" id="wPh"></canvas><canvas class="fall" id="fPh"></canvas></div>
     </div>
 
     <h2>② 精确解调管线（对冻结帧运算 · 每一步都是真实中间量动画）</h2>
@@ -158,9 +159,9 @@
 
     <h2>③ 精确解调谱 |R(f)|（16k 点零填充 ≈3.7 kHz/bin · 冻结采样的一次性测量）</h2>
     <div class="triple">
-      <div class="chan sP spec"><div class="name">压力通道谱</div><div class="info" id="iP">—</div><canvas id="cP"></canvas><div class="stale" id="zp">过期</div></div>
-      <div class="chan sT spec"><div class="name">温度通道谱</div><div class="info" id="iT">—</div><canvas id="cT"></canvas><div class="stale" id="zt">过期</div></div>
-      <div class="chan sPh spec"><div class="name">pH 通道谱</div><div class="info" id="iPh">—</div><canvas id="cPh"></canvas><div class="stale" id="zph">过期</div></div>
+      <div class="chan sP spec"><div class="name">压力通道谱</div><div class="info" id="iP">—</div><canvas id="cP"></canvas><div class="stale" id="zp">被测对象已变化 · 测量作废</div></div>
+      <div class="chan sT spec"><div class="name">温度通道谱</div><div class="info" id="iT">—</div><canvas id="cT"></canvas><div class="stale" id="zt">被测对象已变化 · 测量作废</div></div>
+      <div class="chan sPh spec"><div class="name">pH 通道谱</div><div class="info" id="iPh">—</div><canvas id="cPh"></canvas><div class="stale" id="zph">被测对象已变化 · 测量作废</div></div>
     </div>
 
     <h2>④ 反演 · 三路峰移 → 参数估计（vs 真值）</h2>
@@ -554,7 +555,7 @@ $('bRun').addEventListener('click', async ()=>{
   steps.forEach(s=>s.classList.remove('lit','done'));
   $('runNote').textContent = '冻结采样中…';
   markFall('fP'); markFall('fT'); markFall('fPh');   // 三通道瀑布标记测量时刻
-  ['zP','zT','zPh','zp','zt','zph'].forEach(id=>$(id).classList.remove('on'));
+  ['zp','zt','zph'].forEach(id=>$(id).classList.remove('on'));
   const g = GELS[selected], key = selected;
   // 真实中间量
   stageMem.scan = fullScan(g, state, true);
@@ -665,7 +666,7 @@ function bind(sid,vid,key,unit,d){
   $(sid).addEventListener('input', e=>{
     state[key] = parseFloat(e.target.value);
     $(vid).textContent = state[key].toFixed(d)+unit;
-    ['zP','zT','zPh','zp','zt','zph'].forEach(id=>$(id).classList.add('on'));
+    ['zp','zt','zph'].forEach(id=>$(id).classList.add('on'));
   });
 }
 bind('sP','vP','P',' mmHg',1);
@@ -682,7 +683,7 @@ function animTo(s){
     $('sP').value=state.P; $('vP').textContent=state.P.toFixed(1)+' mmHg';
     $('sT').value=state.T; $('vT').textContent=state.T.toFixed(1)+' °C';
     $('sPh').value=state.Ph; $('vPh').textContent=state.Ph.toFixed(2);
-    ['zP','zT','zPh','zp','zt','zph'].forEach(id=>$(id).classList.add('on'));
+    ['zp','zt','zph'].forEach(id=>$(id).classList.add('on'));
     if(k<1) requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
